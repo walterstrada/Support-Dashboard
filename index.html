@@ -279,6 +279,31 @@
   .status-pill.Closed { background: var(--closed-bg); color: var(--closed); }
   .status-pill:hover { filter: brightness(0.96); }
 
+  .pill-stack { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+  .reply-pill {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 13px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    font-family: var(--font);
+    letter-spacing: 0.01em;
+    min-width: 74px;
+    text-align: center;
+    transition: all 0.12s;
+  }
+  .reply-pill.Needs { background: #fbe9e7; color: #c0392b; border-color: #f3cfc9; }
+  .reply-pill.Replied { background: var(--closed-bg); color: var(--closed); }
+  .reply-pill:hover { filter: brightness(0.96); }
+
+  /* A row that still needs a reply gets a subtle left accent + tint */
+  .row.needs-reply {
+    background: #fef9f8;
+    box-shadow: inset 3px 0 0 #d9534f;
+  }
+  .row.needs-reply:hover { background: #fdf4f3; }
+
   .row .body { flex: 1; min-width: 0; }
   .row .r-top {
     display: flex; align-items: baseline; gap: 9px; margin-bottom: 3px;
@@ -452,6 +477,9 @@ const COLS = {
   subCategory: "Inquiry Sub-Category",
   description: "Description of Issue",
   statusProgress: "Status Progress",
+  replyStatus: "Reply Status",
+  flaggedForReview: "Flagged for Review",
+  reviewNotes: "Review Notes",
   dateReceived: "Date Inquiry Received",
   staff: "Staff Handling Inquiry"
 };
@@ -555,6 +583,11 @@ function normStatus(s) {
   return "Open";
 }
 function statusLabel(cls){ return cls === "Progress" ? "In Progress" : cls; }
+function normReply(s) {
+  // Anything that isn't explicitly "Replied" is treated as needing a reply
+  return (s || "").toLowerCase().includes("repl") && !(s || "").toLowerCase().includes("need")
+    ? "Replied" : "Needs";
+}
 
 function renderDashboard() {
   const rows = STATE.rows;
@@ -673,10 +706,14 @@ function renderRow(r) {
   const desc = r[COLS.description] || "";
   const date = r[COLS.dateReceived] || "";
   const staff = r[COLS.staff] || "";
+  const reply = normReply(r[COLS.replyStatus]);
 
   return `
-    <div class="row" data-rowid="${r._id}">
-      <button class="status-pill ${st}" onclick="openStatusMenu(event, ${r._id})">${statusLabel(st)}</button>
+    <div class="row ${reply === 'Needs' ? 'needs-reply' : ''}" data-rowid="${r._id}">
+      <div class="pill-stack">
+        <button class="status-pill ${st}" onclick="openStatusMenu(event, ${r._id})">${statusLabel(st)}</button>
+        <button class="reply-pill ${reply}" onclick="toggleReply(event, ${r._id})">${reply === 'Needs' ? 'Needs Reply' : 'Replied'}</button>
+      </div>
       <div class="body">
         <div class="r-top">
           <span class="r-name">${escapeHtml(name)}</span>
@@ -768,6 +805,39 @@ async function changeStatus(rowId, newStatus) {
     if (nums.length === 4) { nums[1].textContent = open; nums[2].textContent = prog; nums[3].textContent = closed; }
   } catch (e) {
     row[COLS.status] = prev; // revert
+    renderGroups();
+    toast("Couldn't update Smartsheet — try again");
+  }
+}
+
+// ---- Toggle reply status (Needs Reply <-> Replied) ----
+async function toggleReply(ev, rowId) {
+  ev.stopPropagation();
+  const row = STATE.rows.find(r => r._id === rowId);
+  if (!row) return;
+  const cur = normReply(row[COLS.replyStatus]);
+  const next = cur === "Replied" ? "Needs Reply" : "Replied";
+  const prev = row[COLS.replyStatus];
+  row[COLS.replyStatus] = next;  // optimistic
+  renderGroups();
+
+  try {
+    const res = await fetch(STATE.backendUrl, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        secret: STATE.secret,
+        action: "updateCell",
+        rowId: rowId,
+        columnName: COLS.replyStatus,
+        value: next
+      })
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || "update failed");
+    toast(`Marked ${next}`);
+  } catch (e) {
+    row[COLS.replyStatus] = prev; // revert
     renderGroups();
     toast("Couldn't update Smartsheet — try again");
   }
