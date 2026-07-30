@@ -730,7 +730,7 @@ function renderDashboard() {
           ${renderMultiSelect("inquiryType", types)}
         </div>
         <div class="side-sec">
-          <div class="side-label">Inquiry Subcategory</div>
+          <div class="side-label">Inquiry Sub-Category</div>
           ${renderMultiSelect("subCategory", subs)}
         </div>
         ${anyFilterActive() ? `<button class="clear-filters" onclick="clearFilters()">Clear all filters</button>` : ""}
@@ -756,6 +756,20 @@ function renderDashboard() {
     </div>`;
 
   renderGroups();
+}
+
+// Robustly parse Smartsheet dates (handles M/D/YY, MM/DD/YYYY, ISO)
+function parseDate(v) {
+  if (!v) return 0;
+  const d = new Date(v);
+  if (!isNaN(d)) return d.getTime();
+  const m = String(v).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  if (m) {
+    let yr = parseInt(m[3], 10);
+    if (yr < 100) yr += 2000;
+    return new Date(yr, parseInt(m[1],10)-1, parseInt(m[2],10)).getTime();
+  }
+  return 0;
 }
 
 // Distinct non-empty values for a column, sorted
@@ -829,7 +843,7 @@ function renderGroups() {
 
   if (STATE.viewMode === "chronological") {
     // Flat list, newest first
-    rows.sort((a, b) => new Date(b[COLS.dateReceived]||0) - new Date(a[COLS.dateReceived]||0));
+    rows.sort((a, b) => parseDate(b[COLS.dateReceived]) - parseDate(a[COLS.dateReceived]));
     el.innerHTML = `<div class="flat-list">${rows.map(r => renderRow(r, true)).join("")}</div>`;
     return;
   }
@@ -841,7 +855,7 @@ function renderGroups() {
     (groups[cat] = groups[cat] || []).push(r);
   });
   Object.keys(groups).forEach(cat => {
-    groups[cat].sort((a, b) => new Date(b[COLS.dateReceived]||0) - new Date(a[COLS.dateReceived]||0));
+    groups[cat].sort((a, b) => parseDate(b[COLS.dateReceived]) - parseDate(a[COLS.dateReceived]));
   });
 
   const catOrder = Object.keys(CATEGORY_COLORS).filter(c => groups[c]);
