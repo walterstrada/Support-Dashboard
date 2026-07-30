@@ -541,7 +541,7 @@ const COLS = {
   correspondence: "Correspondence",
   inquiryNature: "Inquiry Nature",
   inquiryType: "Inquiry Type",
-  subCategory: "Inquiry Sub-Category",
+  subCategory: "Inquiry SubCategory",
   description: "Description of Issue",
   statusProgress: "Status Progress",
   replyStatus: "Reply Status",
@@ -722,7 +722,7 @@ function renderDashboard() {
           </select>
         </div>
         <div class="side-sec">
-          <div class="side-label">Inquiry Sub-Category</div>
+          <div class="side-label">Inquiry Subcategory</div>
           <select class="side-select" onchange="setDropdown('subCategory', this.value)">
             <option value="">All</option>
             ${subs.map(v => `<option value="${escapeAttr(v)}" ${STATE.filters.subCategory===v?'selected':''}>${escapeHtml(v)}</option>`).join("")}
