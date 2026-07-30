@@ -555,7 +555,7 @@ const COLS = {
   correspondence: "Correspondence",
   inquiryNature: "Inquiry Nature",
   inquiryType: "Inquiry Type",
-  subCategory: "Inquiry Sub-Category",
+  subCategory: "Inquiry Subcategory",
   description: "Description of Issue",
   statusProgress: "Status Progress",
   replyStatus: "Reply Status",
@@ -730,7 +730,7 @@ function renderDashboard() {
           ${renderMultiSelect("inquiryType", types)}
         </div>
         <div class="side-sec">
-          <div class="side-label">Inquiry Sub-Category</div>
+          <div class="side-label">Inquiry Subcategory</div>
           ${renderMultiSelect("subCategory", subs)}
         </div>
         ${anyFilterActive() ? `<button class="clear-filters" onclick="clearFilters()">Clear all filters</button>` : ""}
