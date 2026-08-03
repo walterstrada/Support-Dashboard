@@ -554,6 +554,8 @@ const COLS = {
   apt: "Apt #",
   correspondence: "Correspondence",
   inquiryNature: "Inquiry Nature",
+  pmCompany: "Property Mgmt Company",
+  napmGroup: "NAPM Group",
   inquiryType: "Inquiry Type",
   subCategory: "Inquiry Subcategory",
   description: "Description of Issue",
@@ -592,6 +594,8 @@ let STATE = {
   filters: {
     status: [],              // multi-select: Open / Progress / Closed
     correspondence: [],      // multi-select: Email / In-Person
+    pmCompany: [],           // multi-select buttons
+    napmGroup: [],           // multi-select buttons
     inquiryNature: [],       // multi-select dropdown
     inquiryType: [],         // multi-select dropdown
     subCategory: []          // multi-select dropdown
@@ -679,15 +683,19 @@ function normReply(s) {
 }
 
 function renderDashboard() {
-  const rows = STATE.rows;
-  const open = rows.filter(r => normStatus(r[COLS.status]) === "Open").length;
-  const prog = rows.filter(r => normStatus(r[COLS.status]) === "Progress").length;
-  const closed = rows.filter(r => normStatus(r[COLS.status]) === "Closed").length;
+  // Stats now reflect what's actually being shown (after filters + search)
+  const visible = applyFilters(STATE.rows.slice());
+  const total = visible.length;
+  const open = visible.filter(r => normStatus(r[COLS.status]) === "Open").length;
+  const prog = visible.filter(r => normStatus(r[COLS.status]) === "Progress").length;
+  const closed = visible.filter(r => normStatus(r[COLS.status]) === "Closed").length;
 
   // Distinct values for the dropdown filters, pulled from the data
   const natures = distinctValues(COLS.inquiryNature);
   const types = distinctValues(COLS.inquiryType);
   const subs = distinctValues(COLS.subCategory);
+  const pmCompanies = distinctValues(COLS.pmCompany);
+  const napmGroups = distinctValues(COLS.napmGroup);
 
   document.getElementById("app").innerHTML = `
     <div class="topbar">
@@ -697,7 +705,7 @@ function renderDashboard() {
         <button class="vt ${STATE.viewMode==='chronological'?'active':''}" onclick="setView('chronological')">Chronological</button>
         <button class="vt ${STATE.viewMode==='category'?'active':''}" onclick="setView('category')">Category</button>
       </div>
-      <div class="meta">${rows.length} total</div>
+      <div class="meta">${total === STATE.rows.length ? `${total} total` : `${total} of ${STATE.rows.length}`}</div>
       <button class="refresh" onclick="loadSheet()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         Refresh
@@ -733,12 +741,30 @@ function renderDashboard() {
           <div class="side-label">Inquiry Sub-Category</div>
           ${renderMultiSelect("subCategory", subs)}
         </div>
+        ${pmCompanies.length ? `
+        <div class="side-sec">
+          <div class="side-label">Property Mgmt Company</div>
+          <div class="side-btns">
+            ${pmCompanies.map(c =>
+              `<button class="side-btn ${STATE.filters.pmCompany.includes(c)?'on':''}" onclick="toggleFilter('pmCompany', ${JSON.stringify(c).replace(/"/g,'&quot;')})">${escapeHtml(c)}</button>`
+            ).join("")}
+          </div>
+        </div>` : ""}
+        ${napmGroups.length ? `
+        <div class="side-sec">
+          <div class="side-label">NAPM Group</div>
+          <div class="side-btns">
+            ${napmGroups.map(g =>
+              `<button class="side-btn ${STATE.filters.napmGroup.includes(g)?'on':''}" onclick="toggleFilter('napmGroup', ${JSON.stringify(g).replace(/"/g,'&quot;')})">${escapeHtml(g)}</button>`
+            ).join("")}
+          </div>
+        </div>` : ""}
         ${anyFilterActive() ? `<button class="clear-filters" onclick="clearFilters()">Clear all filters</button>` : ""}
       </aside>
 
       <div class="main">
         <div class="stats">
-          <div class="stat"><div class="label">Total inquiries</div><div class="num">${rows.length}</div></div>
+          <div class="stat"><div class="label">${anyFilterActive() || STATE.search ? "Showing" : "Total inquiries"}</div><div class="num">${total}</div></div>
           <div class="stat accent-open"><div class="label">Open</div><div class="num">${open}</div></div>
           <div class="stat accent-progress"><div class="label">In progress</div><div class="num">${prog}</div></div>
           <div class="stat accent-closed"><div class="label">Closed</div><div class="num">${closed}</div></div>
@@ -801,7 +827,8 @@ function renderMultiSelect(key, options) {
 }
 function anyFilterActive() {
   const f = STATE.filters;
-  return f.status.length || f.correspondence.length || f.inquiryNature.length || f.inquiryType.length || f.subCategory.length;
+  return f.status.length || f.correspondence.length || f.pmCompany.length || f.napmGroup.length ||
+         f.inquiryNature.length || f.inquiryType.length || f.subCategory.length;
 }
 
 // Apply all active filters + search to the row set
@@ -816,6 +843,8 @@ function applyFilters(rows) {
       );
     });
   }
+  if (f.pmCompany.length) rows = rows.filter(r => f.pmCompany.includes(r[COLS.pmCompany]||""));
+  if (f.napmGroup.length) rows = rows.filter(r => f.napmGroup.includes(r[COLS.napmGroup]||""));
   if (f.inquiryNature.length) rows = rows.filter(r => f.inquiryNature.includes(r[COLS.inquiryNature]||""));
   if (f.inquiryType.length) rows = rows.filter(r => f.inquiryType.includes(r[COLS.inquiryType]||""));
   if (f.subCategory.length) rows = rows.filter(r => f.subCategory.includes(r[COLS.subCategory]||""));
@@ -945,7 +974,21 @@ function toggleGroup(cat) {
   STATE.openGroups[cat] = !cur;
   renderGroups();
 }
-function onSearch(v) { STATE.search = v; renderGroups(); }
+function onSearch(v) { STATE.search = v; renderGroups(); updateStatCounts(); }
+
+// Update just the stat numbers in place (used by search + status/reply toggles)
+function updateStatCounts() {
+  const visible = applyFilters(STATE.rows.slice());
+  const nums = document.querySelectorAll(".stat .num");
+  if (nums.length === 4) {
+    nums[0].textContent = visible.length;
+    nums[1].textContent = visible.filter(r => normStatus(r[COLS.status]) === "Open").length;
+    nums[2].textContent = visible.filter(r => normStatus(r[COLS.status]) === "Progress").length;
+    nums[3].textContent = visible.filter(r => normStatus(r[COLS.status]) === "Closed").length;
+  }
+  const meta = document.querySelector(".topbar .meta");
+  if (meta) meta.textContent = (visible.length === STATE.rows.length) ? `${visible.length} total` : `${visible.length} of ${STATE.rows.length}`;
+}
 
 // ---- View toggle ----
 function setView(mode) { STATE.viewMode = mode; renderDashboard(); }
@@ -969,7 +1012,7 @@ function removeMulti(key, value) {
   renderDashboard();
 }
 function clearFilters() {
-  STATE.filters = { status: [], correspondence: [], inquiryNature: [], inquiryType: [], subCategory: [] };
+  STATE.filters = { status: [], correspondence: [], pmCompany: [], napmGroup: [], inquiryNature: [], inquiryType: [], subCategory: [] };
   renderDashboard();
 }
 
@@ -997,6 +1040,7 @@ async function changeStatus(rowId, newStatus) {
   const prev = row[COLS.status];
   row[COLS.status] = newStatus;  // optimistic
   renderGroups();
+  updateStatCounts();
 
   try {
     const res = await fetch(STATE.backendUrl, {
@@ -1012,15 +1056,10 @@ async function changeStatus(rowId, newStatus) {
     const json = await res.json();
     if (!json.ok) throw new Error(json.error || "update failed");
     toast(`Marked ${newStatus}`);
-    // Refresh the stat counts
-    const open = STATE.rows.filter(r => normStatus(r[COLS.status]) === "Open").length;
-    const prog = STATE.rows.filter(r => normStatus(r[COLS.status]) === "Progress").length;
-    const closed = STATE.rows.filter(r => normStatus(r[COLS.status]) === "Closed").length;
-    const nums = document.querySelectorAll(".stat .num");
-    if (nums.length === 4) { nums[1].textContent = open; nums[2].textContent = prog; nums[3].textContent = closed; }
   } catch (e) {
     row[COLS.status] = prev; // revert
     renderGroups();
+    updateStatCounts();
     toast("Couldn't update Smartsheet — try again");
   }
 }
