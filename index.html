@@ -383,6 +383,7 @@
   .detail-fields { flex: 1; min-width: 0; max-width: 640px; }
   .detail-actions {
     display: flex; flex-direction: column; gap: 7px; flex-shrink: 0; width: 168px;
+    margin-left: auto;
   }
 
   .detail-meta {
@@ -420,6 +421,8 @@
     border-radius: 7px; box-shadow: 0 0 0 3px var(--brand-soft);
     resize: vertical; min-height: 54px; outline: none;
   }
+  .readonly-field { margin-bottom: 12px; }
+  .ro-value { display: block; font-size: 13px; color: var(--ink-soft); padding: 2px 10px; }
 
   .act {
     border: 1px solid var(--line);
@@ -982,9 +985,8 @@ function renderRow(r, showCategory) {
           <div class="detail-fields">
             <div class="detail-meta">
               <button class="reply-pill ${reply}" onclick="toggleReply(event, ${r._id})">${reply === 'Needs' ? 'Needs Reply' : 'Replied'}</button>
-              <span class="dm"><span class="dm-label">Date Received:</span> ${date ? escapeHtml(fmtDate(date)) : '—'}</span>
-              <span class="dm"><span class="dm-label">Last Reply:</span> ${r[COLS.lastReply] ? escapeHtml(fmtDate(r[COLS.lastReply])) : '—'}</span>
-              <span class="dm"><span class="dm-label">Last Updated:</span> ${r[COLS.lastUpdated] ? escapeHtml(fmtDate(r[COLS.lastUpdated])) : '—'}</span>
+              <span class="dm"><span class="dm-label">Date Received:</span> ${date ? escapeHtml(fmtDate(date)) : ''}</span>
+              <span class="dm"><span class="dm-label">Last Reply:</span> ${r[COLS.lastReply] ? escapeHtml(fmtDate(r[COLS.lastReply])) : ''}</span>
               ${staff ? `<span class="dm"><span class="dm-label">Staff:</span> ${escapeHtml(staff)}</span>` : ""}
               ${r[COLS.email] ? `<span class="dm"><span class="dm-label">Email:</span> ${escapeHtml(r[COLS.email])}</span>` : ""}
             </div>
@@ -992,6 +994,10 @@ function renderRow(r, showCategory) {
             ${renderEditable(r._id, "description", "Description of Issue", desc)}
             ${renderEditable(r._id, "notes", "Notes", notes)}
             ${renderEditable(r._id, "followUp", "Follow-Up", followUp)}
+            <div class="readonly-field">
+              <span class="edit-label">Last Updated:</span>
+              <span class="ro-value">${r[COLS.lastUpdated] ? escapeHtml(fmtDate(r[COLS.lastUpdated])) : ''}</span>
+            </div>
           </div>
 
           <div class="detail-actions">
