@@ -424,6 +424,36 @@
   .readonly-field { margin-bottom: 12px; }
   .ro-value { display: block; font-size: 13px; color: var(--ink-soft); padding: 2px 10px; }
 
+  /* Tenant Info click-popover */
+  .rh-name { cursor: pointer; }
+  .rh-name:hover { color: var(--brand); text-decoration: underline; text-underline-offset: 2px; }
+  .tenant-info {
+    position: absolute; z-index: 300; width: 320px;
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: 12px; box-shadow: 0 8px 30px rgba(26,29,33,0.16);
+    padding: 15px 16px 16px;
+  }
+  .ti-title { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 12px; letter-spacing: -0.01em; }
+  .ti-field { margin-bottom: 10px; }
+  .ti-row2 { display: flex; gap: 10px; }
+  .ti-row2 .ti-field { flex: 1; margin-bottom: 10px; }
+  .ti-label {
+    display: block; font-size: 10.5px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.03em; color: var(--ink-faint); margin-bottom: 4px;
+  }
+  .ti-input, .ti-select {
+    width: 100%; font-size: 13px; font-family: var(--font); color: var(--ink);
+    padding: 6px 9px; border: 1px solid var(--line); border-radius: 6px;
+    background: var(--paper); transition: all 0.12s;
+  }
+  .ti-input:focus, .ti-select:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+  .ti-select { cursor: pointer; }
+  .ti-addr { margin-bottom: 10px; }
+  .ti-addr-row { display: flex; gap: 7px; }
+  .ti-addr-row .ti-select:first-child { flex: 2; min-width: 0; }
+  .ti-addr-row .ti-unit { flex: 1; min-width: 0; }
+  .ti-addr-row .ti-select:last-child { flex: 1.3; min-width: 0; }
+
   .act {
     border: 1px solid var(--line);
     background: var(--paper);
@@ -585,6 +615,7 @@ const COLS = {
   addressStr: "Address (String)",
   address: "Address",
   apt: "Apt #",
+  tenantId: "Tenant ID",
   correspondence: "Correspondence",
   inquiryNature: "Inquiry Nature",
   pmCompany: "Property Mgmt Company",
@@ -618,6 +649,41 @@ const CATEGORY_COLORS = {
 };
 
 const STATUS_OPTIONS = ["Open", "In Progress", "Closed"];
+
+const VALID_ADDRESSES = [
+  "244 Fieldstone Terrace","2800 Heath Avenue","3410 Kingsbridge Avenue",
+  "4360 Baychester Avenue","2340 Valentine Avenue","241-251 Sherman Avenue",
+  "281 Wadsworth Avenue","295 Wadsworth Avenue","34-44 Seaman Avenue",
+  "536 Isham Street","58-60 Elizabeth Street","671-681 West 193rd Street",
+  "146 Hester Street","2 West 120th Street","11 Hillside Avenue",
+  "25 Hillside Avenue","35 Hillside Avenue","155 Audubon Avenue",
+  "233 East 77th Street","237 West 18th Street","349 East 51st Street",
+  "402 West 148th Street","412 West 148th Street","509 West 155th Street",
+  "544 West 50th Street","546 West 50th Street","548 West 50th Street",
+  "639-645 West 207th Street","4530 Broadway","25-10/20-30 Road",
+  "40-15 Hampton Avenue","63-70 Austin Street","63-74 Austin Street",
+  "63-90 Austin Street","63-94 Austin Street","85-05 35th Avenue",
+  "94-06 34th Road","94-06 34th Avenue","45-35 44th Street","76-09 34th Avenue",
+  "85-50 Forest Parkway","86-20 Park Lane South","87-50 Kingston Place",
+  "35-19 147th Street","115 East 21st Street","1280 Ocean Avenue",
+  "1362 Ocean Avenue","1535 Ocean Avenue","1554 Ocean Avenue",
+  "2102 Beverly Road","225 Parkside Avenue","240 East 18th Street",
+  "2400 Nostrand Avenue","416 East 17th Street","422 East 17th Street",
+  "426-430 East 22nd Street","457 Schenectady Avenue","470 Ocean Avenue",
+  "481 Eastern Parkway","489 Eastern Parkway","497 Eastern Parkway",
+  "607 Rugby Road","625 Rugby Road","681 Ocean Avenue","706 Lefferts Avenue",
+  "85 Clarkson Avenue","915 Washington Avenue","932 Carroll Street",
+  "990 Montgomery Street","991 Carroll Street","993 Carroll Street",
+  "991-993 Carroll Street","1820 Cortelyou Road","28 Argyle Road",
+  "916 Carroll Street","1038 Union Street","1042 Union Street",
+  "1048 Union Street","1060 Union Street","176 Clarkson Avenue",
+  "222 Lenox Road","40 Argyle Road","292 St. Johns Place","307 12th Street",
+  "314 Clinton Avenue","330 East 19th Street","405 East 16th Street",
+  "529 East 22nd Street","619 Rugby Road","815 Gravesend Neck Road",
+  "1023 Carroll Street","1171 - 1179 President Street","1296 Pacific Street",
+  "1597 Bedford Avenue","1617 President Street","2513 - 2523 Newkirk Avenue",
+  "3301 Farragut Road","1601 Bedford Avenue","615 Rugby Road"
+];
 
 let STATE = {
   backendUrl: localStorage_get("sd_url"),
@@ -971,7 +1037,7 @@ function renderRow(r, showCategory) {
     <div class="row ${reply === 'Needs' ? 'needs-reply' : ''} ${isExpanded ? 'expanded' : ''}" data-rowid="${r._id}">
       <div class="row-header" onclick="toggleRow(${r._id})">
         <button class="status-pill ${st}" onclick="event.stopPropagation(); openStatusMenu(event, ${r._id});">${statusLabel(st)}</button>
-        <span class="rh-name">${escapeHtml(name)}</span>
+        <span class="rh-name" onclick="event.stopPropagation(); toggleTenantInfo(${r._id}, event);">${escapeHtml(name)}</span>
         <span class="rh-cat" style="background:${catColor}1a;color:${catColor}">${escapeHtml(cat)}</span>
         ${sub ? `<span class="rh-sub">${escapeHtml(sub)}</span>` : ""}
         <span class="rh-spacer"></span>
@@ -1112,6 +1178,117 @@ async function saveEdit(rowId, field, newValue) {
     renderGroups();
     toast("Couldn't save — try again");
   }
+}
+
+// Generic save of any column value for a row (used by the Tenant Info box)
+async function saveField(rowId, colName, newValue) {
+  const row = STATE.rows.find(r => r._id === rowId);
+  if (!row) return;
+  const prev = row[colName] || "";
+  if (newValue === prev) return;
+  row[colName] = newValue; // optimistic
+  try {
+    const res = await fetch(STATE.backendUrl, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        secret: STATE.secret, action: "updateCell",
+        rowId: rowId, columnName: colName, value: newValue
+      })
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || "update failed");
+    toast("Saved");
+  } catch (e) {
+    row[colName] = prev; // revert
+    toast("Couldn't save — try again");
+    // Re-render the box to show reverted value
+    const existing = document.getElementById("tenantInfoBox");
+    if (existing) renderTenantInfoInto(existing, rowId);
+  }
+}
+
+// ---- Tenant Info box (click tenant name) ----
+let tenantInfoRowId = null;
+
+function toggleTenantInfo(rowId, ev) {
+  if (ev) ev.stopPropagation();
+  const existing = document.getElementById("tenantInfoBox");
+  if (existing && tenantInfoRowId === rowId) { closeTenantInfo(); return; }
+  closeTenantInfo();
+
+  const box = document.createElement("div");
+  box.id = "tenantInfoBox";
+  box.className = "tenant-info";
+  box.onclick = (e) => e.stopPropagation();
+  document.body.appendChild(box);
+  renderTenantInfoInto(box, rowId);
+  tenantInfoRowId = rowId;
+
+  // Position near the clicked name
+  const rect = ev.target.getBoundingClientRect();
+  const bw = 320;
+  let left = rect.left + window.scrollX;
+  if (left + bw > window.scrollX + window.innerWidth - 16) {
+    left = window.scrollX + window.innerWidth - bw - 16;
+  }
+  box.style.left = left + "px";
+  box.style.top = (rect.bottom + window.scrollY + 6) + "px";
+
+  setTimeout(() => document.addEventListener("click", closeTenantInfo, { once: true }), 0);
+}
+
+function closeTenantInfo() {
+  const b = document.getElementById("tenantInfoBox");
+  if (b) b.remove();
+  tenantInfoRowId = null;
+}
+
+function renderTenantInfoInto(box, rowId) {
+  const r = STATE.rows.find(x => x._id === rowId);
+  if (!r) return;
+  const addresses = VALID_ADDRESSES;
+  const boroughs = ["Bronx", "Manhattan", "Queens", "Brooklyn", "Staten Island"];
+
+  const tiText = (label, colKey, value) => `
+    <div class="ti-field">
+      <span class="ti-label">${label}</span>
+      <input class="ti-input" type="text" value="${escapeAttr(value||"")}"
+        onchange="saveField(${rowId}, ${JSON.stringify(COLS[colKey]).replace(/"/g,'&quot;')}, this.value)">
+    </div>`;
+
+  const tiSelect = (label, colName, value, options) => `
+    <div class="ti-field">
+      <span class="ti-label">${label}</span>
+      <select class="ti-select" onchange="saveField(${rowId}, ${JSON.stringify(colName).replace(/"/g,'&quot;')}, this.value)">
+        <option value="">—</option>
+        ${options.map(o => `<option value="${escapeAttr(o)}" ${value===o?'selected':''}>${escapeHtml(o)}</option>`).join("")}
+      </select>
+    </div>`;
+
+  box.innerHTML = `
+    <div class="ti-title">Tenant Info</div>
+    ${tiText("Tenant Name", "name", r[COLS.name])}
+    <div class="ti-row2">
+      ${tiText("Tenant Email", "email", r[COLS.email])}
+      ${tiText("Tenant Phone", "phone", r[COLS.phone])}
+    </div>
+    <div class="ti-addr">
+      <span class="ti-label">Building Address</span>
+      <div class="ti-addr-row">
+        <select class="ti-select" onchange="saveField(${rowId}, ${JSON.stringify(COLS.address).replace(/"/g,'&quot;')}, this.value)">
+          <option value="">Address…</option>
+          ${(r[COLS.address] && !addresses.includes(r[COLS.address]) ? [r[COLS.address]] : []).concat(addresses).map(a => `<option value="${escapeAttr(a)}" ${r[COLS.address]===a?'selected':''}>${escapeHtml(a)}</option>`).join("")}
+        </select>
+        <input class="ti-input ti-unit" type="text" placeholder="Unit" value="${escapeAttr(r[COLS.apt]||"")}"
+          onchange="saveField(${rowId}, ${JSON.stringify(COLS.apt).replace(/"/g,'&quot;')}, this.value)">
+        <select class="ti-select" onchange="saveField(${rowId}, ${JSON.stringify(COLS.borough).replace(/"/g,'&quot;')}, this.value)">
+          <option value="">Borough…</option>
+          ${boroughs.map(b => `<option value="${escapeAttr(b)}" ${r[COLS.borough]===b?'selected':''}>${escapeHtml(b)}</option>`).join("")}
+        </select>
+      </div>
+    </div>
+    ${tiText("Tenant ID", "tenantId", r[COLS.tenantId])}`;
 }
 function onSearch(v) { STATE.search = v; renderGroups(); updateStatCounts(); }
 
