@@ -378,11 +378,19 @@
   .row-detail { display: none; padding: 16px 16px 15px; }
   .row.expanded .row-detail { display: block; }
 
+  /* Two-column: fields on the left, action buttons on the right */
+  .detail-grid { display: flex; gap: 20px; align-items: flex-start; }
+  .detail-fields { flex: 1; min-width: 0; max-width: 640px; }
+  .detail-actions {
+    display: flex; flex-direction: column; gap: 7px; flex-shrink: 0; width: 168px;
+  }
+
   .detail-meta {
-    display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 7px 16px;
     margin-bottom: 15px;
   }
-  .detail-meta .dm { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--ink-faint); }
+  .detail-meta .dm { font-size: 12px; color: var(--ink-soft); }
+  .detail-meta .dm-label { color: var(--ink-faint); font-weight: 500; }
   .reply-pill {
     font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 12px;
     cursor: pointer; border: 1px solid transparent; font-family: var(--font);
@@ -393,32 +401,31 @@
   .reply-pill:hover { filter: brightness(0.96); }
 
   /* Editable fields */
-  .editable { margin-bottom: 13px; }
+  .editable { margin-bottom: 12px; }
   .edit-label {
     display: block; font-size: 11px; font-weight: 600; text-transform: uppercase;
     letter-spacing: 0.03em; color: var(--ink-faint); margin-bottom: 4px;
   }
   .edit-value {
-    display: block; font-size: 13.5px; color: var(--ink-soft); line-height: 1.55;
+    display: block; font-size: 13.5px; color: var(--ink-soft); line-height: 1.5;
     padding: 7px 10px; border-radius: 7px; border: 1px solid transparent;
-    cursor: text; white-space: pre-wrap; transition: all 0.12s; min-height: 20px;
+    cursor: text; white-space: pre-wrap; transition: all 0.12s; min-height: 34px;
   }
+  /* Blank fields sit at half height until filled */
+  .edit-value.empty { color: var(--ink-faint); font-style: italic; min-height: 17px; padding: 4px 10px; }
   .edit-value:hover { background: #f7f8f9; border-color: var(--line); }
-  .edit-value.empty { color: var(--ink-faint); font-style: italic; }
   .edit-input {
     width: 100%; font-size: 13.5px; font-family: var(--font); color: var(--ink);
-    line-height: 1.55; padding: 7px 10px; border: 1px solid var(--brand);
+    line-height: 1.5; padding: 7px 10px; border: 1px solid var(--brand);
     border-radius: 7px; box-shadow: 0 0 0 3px var(--brand-soft);
-    resize: vertical; min-height: 60px; outline: none;
+    resize: vertical; min-height: 54px; outline: none;
   }
 
-  .actions { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
-  .act-spacer { flex: 1; }
   .act {
     border: 1px solid var(--line);
     background: var(--paper);
     color: var(--ink-soft);
-    padding: 7px 12px;
+    padding: 8px 12px;
     border-radius: var(--radius-sm);
     font-size: 12px;
     font-weight: 500;
@@ -426,13 +433,13 @@
     font-family: var(--font);
     white-space: nowrap;
     transition: all 0.12s;
-    display: flex; align-items: center; gap: 6px;
+    display: flex; align-items: center; gap: 6px; justify-content: flex-start;
     text-decoration: none;
   }
   .act:hover { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
   .act.primary { background: var(--brand); color: #fff; border-color: var(--brand); }
   .act.primary:hover { background: #234c3c; color: #fff; }
-  .act.collapse-btn { color: var(--ink-faint); }
+  .act.collapse-btn { color: var(--ink-faint); margin-top: 4px; }
 
   /* ---- Status dropdown ---- */
   .status-menu {
@@ -523,7 +530,8 @@
     .stats { grid-template-columns: repeat(2, 1fr); }
     .row-header { flex-wrap: wrap; gap: 8px; }
     .rh-loc { flex-basis: 100%; }
-    .actions { width: 100%; }
+    .detail-grid { flex-direction: column; }
+    .detail-actions { width: 100%; flex-direction: row; flex-wrap: wrap; }
     .toolbar { flex-wrap: wrap; }
     .search { flex-basis: 100%; }
     .view-toggle .vt { padding: 6px 10px; }
@@ -583,6 +591,8 @@ const COLS = {
   description: "Description of Issue",
   notes: "Notes",
   followUp: "Follow-Up",
+  lastUpdated: "Last Updated",
+  lastReply: "Last Reply",
   statusProgress: "Status Progress",
   replyStatus: "Reply Status",
   flaggedForReview: "Flagged for Review",
@@ -968,39 +978,44 @@ function renderRow(r, showCategory) {
       </div>
 
       <div class="row-detail">
-        <div class="detail-meta">
-          <button class="reply-pill ${reply}" onclick="toggleReply(event, ${r._id})">${reply === 'Needs' ? 'Needs Reply' : 'Replied'}</button>
-          ${date ? `<span class="dm"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${escapeHtml(fmtDate(date))}</span>` : ""}
-          ${staff ? `<span class="dm"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${escapeHtml(staff)}</span>` : ""}
-          ${r[COLS.email] ? `<span class="dm"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>${escapeHtml(r[COLS.email])}</span>` : ""}
-        </div>
+        <div class="detail-grid">
+          <div class="detail-fields">
+            <div class="detail-meta">
+              <button class="reply-pill ${reply}" onclick="toggleReply(event, ${r._id})">${reply === 'Needs' ? 'Needs Reply' : 'Replied'}</button>
+              <span class="dm"><span class="dm-label">Date Received:</span> ${date ? escapeHtml(fmtDate(date)) : '—'}</span>
+              <span class="dm"><span class="dm-label">Last Reply:</span> ${r[COLS.lastReply] ? escapeHtml(fmtDate(r[COLS.lastReply])) : '—'}</span>
+              <span class="dm"><span class="dm-label">Last Updated:</span> ${r[COLS.lastUpdated] ? escapeHtml(fmtDate(r[COLS.lastUpdated])) : '—'}</span>
+              ${staff ? `<span class="dm"><span class="dm-label">Staff:</span> ${escapeHtml(staff)}</span>` : ""}
+              ${r[COLS.email] ? `<span class="dm"><span class="dm-label">Email:</span> ${escapeHtml(r[COLS.email])}</span>` : ""}
+            </div>
 
-        ${renderEditable(r._id, "description", "Description of Issue", desc)}
-        ${renderEditable(r._id, "notes", "Notes", notes)}
-        ${renderEditable(r._id, "followUp", "Follow-Up", followUp)}
+            ${renderEditable(r._id, "description", "Description of Issue", desc)}
+            ${renderEditable(r._id, "notes", "Notes", notes)}
+            ${renderEditable(r._id, "followUp", "Follow-Up", followUp)}
+          </div>
 
-        <div class="actions">
-          <button class="act primary" onclick='draftReply(${r._id})'>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
-            Reply
-          </button>
-          <button class="act" onclick='draftForward(${r._id})'>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 17 20 12 15 7"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg>
-            Forward
-          </button>
-          <button class="act" onclick='openThread(${r._id})'>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-            Thread
-          </button>
-          <button class="act" onclick='openInSmartsheet(${r._id})'>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            Edit in Smartsheet
-          </button>
-          <span class="act-spacer"></span>
-          <button class="act collapse-btn" onclick="toggleRow(${r._id})">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
-            Collapse
-          </button>
+          <div class="detail-actions">
+            <button class="act primary" onclick='draftReply(${r._id})'>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+              Reply
+            </button>
+            <button class="act" onclick='draftForward(${r._id})'>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 17 20 12 15 7"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg>
+              Forward
+            </button>
+            <button class="act" onclick='openThread(${r._id})'>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              Thread
+            </button>
+            <button class="act" onclick='openInSmartsheet(${r._id})'>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              Edit in Smartsheet
+            </button>
+            <button class="act collapse-btn" onclick="toggleRow(${r._id})">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+              Collapse
+            </button>
+          </div>
         </div>
       </div>
     </div>`;
