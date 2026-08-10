@@ -318,28 +318,33 @@
 
   /* ---- Inquiry row ---- */
   .row {
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    padding: 14px 16px;
     background: var(--paper);
     border-bottom: 1px solid var(--line-soft);
-    transition: background 0.1s;
   }
   .row:last-child { border-bottom: none; }
-  .row:hover { background: #fafbfb; }
 
-  .row .status-pill {
+  /* Slim clickable header — always visible */
+  .row-header {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 11px 16px;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .row-header:hover { background: #fafbfb; }
+  .row.expanded .row-header { background: #f7f9f8; border-bottom: 1px solid var(--line-soft); }
+
+  .row-header .status-pill {
     flex-shrink: 0;
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 600;
-    padding: 4px 10px;
-    border-radius: 13px;
+    padding: 3px 9px;
+    border-radius: 12px;
     cursor: pointer;
     border: 1px solid transparent;
     font-family: var(--font);
-    letter-spacing: 0.01em;
-    min-width: 74px;
+    min-width: 68px;
     text-align: center;
     transition: all 0.12s;
   }
@@ -348,57 +353,72 @@
   .status-pill.Closed { background: var(--closed-bg); color: var(--closed); }
   .status-pill:hover { filter: brightness(0.96); }
 
-  .pill-stack { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+  .rh-name { font-weight: 600; font-size: 13.5px; color: var(--ink); flex-shrink: 0; }
+  .rh-cat { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 5px; flex-shrink: 0; }
+  .rh-sub {
+    font-size: 11.5px; color: var(--brand-ink); background: var(--brand-soft);
+    padding: 2px 8px; border-radius: 5px; font-weight: 500; flex-shrink: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;
+  }
+  .rh-spacer { flex: 1; min-width: 8px; }
+  .rh-needs {
+    font-size: 10.5px; font-weight: 700; color: #c0392b; background: #fbe9e7;
+    padding: 2px 8px; border-radius: 10px; flex-shrink: 0; letter-spacing: 0.02em;
+  }
+  .rh-loc { font-size: 12px; color: var(--ink-faint); flex-shrink: 0; white-space: nowrap; }
+  .rh-caret { color: var(--ink-faint); display: flex; transition: transform 0.18s; flex-shrink: 0; }
+  .row.expanded .rh-caret { transform: rotate(180deg); }
+
+  /* Needs-reply accent on the whole row */
+  .row.needs-reply { box-shadow: inset 3px 0 0 #d9534f; }
+  .row.needs-reply .row-header { background: #fef9f8; }
+  .row.needs-reply .row-header:hover { background: #fdf4f3; }
+
+  /* Expanded detail area */
+  .row-detail { display: none; padding: 16px 16px 15px; }
+  .row.expanded .row-detail { display: block; }
+
+  .detail-meta {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px;
+    margin-bottom: 15px;
+  }
+  .detail-meta .dm { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--ink-faint); }
   .reply-pill {
-    font-size: 11px;
-    font-weight: 600;
-    padding: 4px 10px;
-    border-radius: 13px;
-    cursor: pointer;
-    border: 1px solid transparent;
-    font-family: var(--font);
-    letter-spacing: 0.01em;
-    min-width: 74px;
-    text-align: center;
-    transition: all 0.12s;
+    font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 12px;
+    cursor: pointer; border: 1px solid transparent; font-family: var(--font);
+    min-width: 74px; text-align: center; transition: all 0.12s;
   }
   .reply-pill.Needs { background: #fbe9e7; color: #c0392b; border-color: #f3cfc9; }
   .reply-pill.Replied { background: var(--closed-bg); color: var(--closed); }
   .reply-pill:hover { filter: brightness(0.96); }
 
-  /* A row that still needs a reply gets a subtle left accent + tint */
-  .row.needs-reply {
-    background: #fef9f8;
-    box-shadow: inset 3px 0 0 #d9534f;
+  /* Editable fields */
+  .editable { margin-bottom: 13px; }
+  .edit-label {
+    display: block; font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.03em; color: var(--ink-faint); margin-bottom: 4px;
   }
-  .row.needs-reply:hover { background: #fdf4f3; }
+  .edit-value {
+    display: block; font-size: 13.5px; color: var(--ink-soft); line-height: 1.55;
+    padding: 7px 10px; border-radius: 7px; border: 1px solid transparent;
+    cursor: text; white-space: pre-wrap; transition: all 0.12s; min-height: 20px;
+  }
+  .edit-value:hover { background: #f7f8f9; border-color: var(--line); }
+  .edit-value.empty { color: var(--ink-faint); font-style: italic; }
+  .edit-input {
+    width: 100%; font-size: 13.5px; font-family: var(--font); color: var(--ink);
+    line-height: 1.55; padding: 7px 10px; border: 1px solid var(--brand);
+    border-radius: 7px; box-shadow: 0 0 0 3px var(--brand-soft);
+    resize: vertical; min-height: 60px; outline: none;
+  }
 
-  .row .body { flex: 1; min-width: 0; }
-  .row .r-top {
-    display: flex; align-items: baseline; gap: 9px; margin-bottom: 3px;
-  }
-  .row .r-name { font-weight: 600; font-size: 13.5px; color: var(--ink); }
-  .row .r-loc { font-size: 12.5px; color: var(--ink-faint); }
-  .row .r-sub {
-    font-size: 11.5px; color: var(--brand-ink); background: var(--brand-soft);
-    padding: 1px 8px; border-radius: 5px; font-weight: 500;
-  }
-  .row .r-desc {
-    font-size: 13px; color: var(--ink-soft); line-height: 1.55;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  .row .r-meta {
-    display: flex; gap: 14px; margin-top: 6px; font-size: 12px; color: var(--ink-faint);
-  }
-  .row .r-meta span { display: flex; align-items: center; gap: 5px; }
-
-  .row .actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+  .actions { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+  .act-spacer { flex: 1; }
   .act {
     border: 1px solid var(--line);
     background: var(--paper);
     color: var(--ink-soft);
-    padding: 6px 11px;
+    padding: 7px 12px;
     border-radius: var(--radius-sm);
     font-size: 12px;
     font-weight: 500;
@@ -412,6 +432,7 @@
   .act:hover { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
   .act.primary { background: var(--brand); color: #fff; border-color: var(--brand); }
   .act.primary:hover { background: #234c3c; color: #fff; }
+  .act.collapse-btn { color: var(--ink-faint); }
 
   /* ---- Status dropdown ---- */
   .status-menu {
@@ -500,8 +521,9 @@
   }
   @media (max-width: 720px) {
     .stats { grid-template-columns: repeat(2, 1fr); }
-    .row { flex-wrap: wrap; }
-    .row .actions { flex-direction: row; width: 100%; margin-top: 8px; }
+    .row-header { flex-wrap: wrap; gap: 8px; }
+    .rh-loc { flex-basis: 100%; }
+    .actions { width: 100%; }
     .toolbar { flex-wrap: wrap; }
     .search { flex-basis: 100%; }
     .view-toggle .vt { padding: 6px 10px; }
@@ -559,6 +581,8 @@ const COLS = {
   inquiryType: "Inquiry Type",
   subCategory: "Inquiry Subcategory",
   description: "Description of Issue",
+  notes: "Notes",
+  followUp: "Follow-Up",
   statusProgress: "Status Progress",
   replyStatus: "Reply Status",
   flaggedForReview: "Flagged for Review",
@@ -600,7 +624,8 @@ let STATE = {
     inquiryType: [],         // multi-select dropdown
     subCategory: []          // multi-select dropdown
   },
-  openGroups: {}
+  openGroups: {},
+  expanded: {}
 };
 
 // localStorage is blocked in some sandboxes — wrap safely
@@ -920,49 +945,74 @@ function renderRow(r, showCategory) {
   const loc = [addr, apt].filter(Boolean).join(" ");
   const sub = r[COLS.subCategory] || "";
   const desc = r[COLS.description] || "";
+  const notes = r[COLS.notes] || "";
+  const followUp = r[COLS.followUp] || "";
   const date = r[COLS.dateReceived] || "";
   const staff = r[COLS.staff] || "";
   const reply = normReply(r[COLS.replyStatus]);
   const cat = r[COLS.inquiryType] || "Uncategorized";
   const catColor = CATEGORY_COLORS[cat] || "#6b7280";
+  const isExpanded = STATE.expanded[r._id] === true;
 
   return `
-    <div class="row ${reply === 'Needs' ? 'needs-reply' : ''}" data-rowid="${r._id}">
-      <div class="pill-stack">
-        <button class="status-pill ${st}" onclick="openStatusMenu(event, ${r._id})">${statusLabel(st)}</button>
-        <button class="reply-pill ${reply}" onclick="toggleReply(event, ${r._id})">${reply === 'Needs' ? 'Needs Reply' : 'Replied'}</button>
+    <div class="row ${reply === 'Needs' ? 'needs-reply' : ''} ${isExpanded ? 'expanded' : ''}" data-rowid="${r._id}">
+      <div class="row-header" onclick="toggleRow(${r._id})">
+        <button class="status-pill ${st}" onclick="event.stopPropagation(); openStatusMenu(event, ${r._id});">${statusLabel(st)}</button>
+        <span class="rh-name">${escapeHtml(name)}</span>
+        <span class="rh-cat" style="background:${catColor}1a;color:${catColor}">${escapeHtml(cat)}</span>
+        ${sub ? `<span class="rh-sub">${escapeHtml(sub)}</span>` : ""}
+        <span class="rh-spacer"></span>
+        ${reply === 'Needs' ? `<span class="rh-needs">Needs Reply</span>` : ""}
+        ${loc ? `<span class="rh-loc">${escapeHtml(loc)}</span>` : ""}
+        <span class="rh-caret"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></span>
       </div>
-      <div class="body">
-        <div class="r-top">
-          <span class="r-name">${escapeHtml(name)}</span>
-          ${loc ? `<span class="r-loc">${escapeHtml(loc)}</span>` : ""}
-          ${showCategory ? `<span class="r-cat" style="background:${catColor}1a;color:${catColor}">${escapeHtml(cat)}</span>` : ""}
-          ${sub ? `<span class="r-sub">${escapeHtml(sub)}</span>` : ""}
+
+      <div class="row-detail">
+        <div class="detail-meta">
+          <button class="reply-pill ${reply}" onclick="toggleReply(event, ${r._id})">${reply === 'Needs' ? 'Needs Reply' : 'Replied'}</button>
+          ${date ? `<span class="dm"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${escapeHtml(fmtDate(date))}</span>` : ""}
+          ${staff ? `<span class="dm"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${escapeHtml(staff)}</span>` : ""}
+          ${r[COLS.email] ? `<span class="dm"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>${escapeHtml(r[COLS.email])}</span>` : ""}
         </div>
-        <div class="r-desc">${escapeHtml(desc)}</div>
-        <div class="r-meta">
-          ${date ? `<span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${escapeHtml(fmtDate(date))}</span>` : ""}
-          ${staff ? `<span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${escapeHtml(staff)}</span>` : ""}
+
+        ${renderEditable(r._id, "description", "Description of Issue", desc)}
+        ${renderEditable(r._id, "notes", "Notes", notes)}
+        ${renderEditable(r._id, "followUp", "Follow-Up", followUp)}
+
+        <div class="actions">
+          <button class="act primary" onclick='draftReply(${r._id})'>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+            Reply
+          </button>
+          <button class="act" onclick='draftForward(${r._id})'>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 17 20 12 15 7"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg>
+            Forward
+          </button>
+          <button class="act" onclick='openThread(${r._id})'>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            Thread
+          </button>
+          <button class="act" onclick='openInSmartsheet(${r._id})'>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            Edit in Smartsheet
+          </button>
+          <span class="act-spacer"></span>
+          <button class="act collapse-btn" onclick="toggleRow(${r._id})">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+            Collapse
+          </button>
         </div>
       </div>
-      <div class="actions">
-        <button class="act primary" onclick='draftReply(${r._id})'>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
-          Reply
-        </button>
-        <button class="act" onclick='draftForward(${r._id})'>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 17 20 12 15 7"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg>
-          Forward
-        </button>
-        <button class="act" onclick='openThread(${r._id})'>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-          Thread
-        </button>
-        <button class="act" onclick='openInSmartsheet(${r._id})'>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          Edit
-        </button>
-      </div>
+    </div>`;
+}
+
+// An inline-editable field: shows as text with a faint label, becomes a textarea on click
+function renderEditable(rowId, field, label, value) {
+  const has = value && value.trim();
+  return `
+    <div class="editable" data-field="${field}" data-rowid="${rowId}">
+      <span class="edit-label">${label}:</span>
+      <span class="edit-value ${has ? '' : 'empty'}" onclick="startEdit(${rowId}, '${field}', event)">${has ? escapeHtml(value) : 'Click to add…'}</span>
     </div>`;
 }
 
@@ -973,6 +1023,74 @@ function toggleGroup(cat) {
   const cur = STATE.openGroups[cat] !== false;
   STATE.openGroups[cat] = !cur;
   renderGroups();
+}
+
+// ---- Expand/collapse a row ----
+function toggleRow(rowId) {
+  STATE.expanded[rowId] = !STATE.expanded[rowId];
+  renderGroups();
+}
+
+// ---- Inline text editing ----
+let activeEdit = null; // { rowId, field }
+
+function startEdit(rowId, field, ev) {
+  if (ev) ev.stopPropagation();
+  const wrap = document.querySelector(`.editable[data-field="${field}"][data-rowid="${rowId}"]`);
+  if (!wrap) return;
+  const valSpan = wrap.querySelector(".edit-value");
+  const row = STATE.rows.find(r => r._id === rowId);
+  const current = row ? (row[COLS[field]] || "") : "";
+
+  // Build a textarea in place
+  const ta = document.createElement("textarea");
+  ta.className = "edit-input";
+  ta.value = current;
+  valSpan.replaceWith(ta);
+  ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
+  activeEdit = { rowId, field };
+
+  // Save on blur, or on Enter (without Shift). Escape cancels.
+  ta.addEventListener("blur", () => saveEdit(rowId, field, ta.value));
+  ta.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ta.blur(); }
+    else if (e.key === "Escape") { activeEdit = null; renderGroups(); }
+  });
+}
+
+async function saveEdit(rowId, field, newValue) {
+  if (!activeEdit) return; // already handled (e.g. Escape)
+  activeEdit = null;
+  const row = STATE.rows.find(r => r._id === rowId);
+  if (!row) return;
+  const colName = COLS[field];
+  const prev = row[colName] || "";
+  if (newValue === prev) { renderGroups(); return; } // no change
+
+  row[colName] = newValue; // optimistic
+  renderGroups();
+
+  try {
+    const res = await fetch(STATE.backendUrl, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        secret: STATE.secret,
+        action: "updateCell",
+        rowId: rowId,
+        columnName: colName,
+        value: newValue
+      })
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || "update failed");
+    toast("Saved");
+  } catch (e) {
+    row[colName] = prev; // revert
+    renderGroups();
+    toast("Couldn't save — try again");
+  }
 }
 function onSearch(v) { STATE.search = v; renderGroups(); updateStatCounts(); }
 
