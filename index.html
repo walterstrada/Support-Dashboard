@@ -1180,7 +1180,7 @@ function renderRow(r, showCategory) {
               <span class="dm"><span class="dm-label">Date Received:</span> ${date ? escapeHtml(fmtDate(date)) : ''}</span>
               <span class="dm"><span class="dm-label">Last Reply:</span> ${r[COLS.lastReply] ? escapeHtml(fmtDate(r[COLS.lastReply])) : ''}</span>
               ${staff ? `<span class="dm"><span class="dm-label">Staff:</span> ${escapeHtml(staff)}</span>` : ""}
-              ${r[COLS.email] ? `<span class="dm"><span class="dm-label">Email:</span> ${escapeHtml(r[COLS.email])}</span>` : ""}
+              ${r[COLS.dateAlerted] ? `<span class="dm"><span class="dm-label">Date Alerted Mgmt Co.:</span> ${escapeHtml(fmtDate(r[COLS.dateAlerted]))}</span>` : ""}
             </div>
 
             ${renderEditable(r._id, "description", "Description of Issue", desc)}
@@ -1425,11 +1425,8 @@ function renderTenantInfoInto(box, rowId) {
     </div>
     ${tiText("Tenant Name", "name", r[COLS.name])}
     <div class="ti-row2">
+      ${tiText("Tenant Email", "email", r[COLS.email])}
       ${tiText("Tenant Phone", "phone", r[COLS.phone])}
-      <div class="ti-field">
-        <span class="ti-label">Date Alerted Mgmt Co.</span>
-        <span class="ti-ro">${r[COLS.dateAlerted] ? escapeHtml(fmtDate(r[COLS.dateAlerted])) : ''}</span>
-      </div>
     </div>
     <div class="ti-addr">
       <span class="ti-label">Building Address</span>
@@ -1462,10 +1459,7 @@ function renderTenantInfoInto(box, rowId) {
         </div>
       </div>
     </div>
-    <div class="ti-row2">
-      ${tiText("Tenant Email", "email", r[COLS.email])}
-      ${tiText("Tenant ID", "tenantId", r[COLS.tenantId])}
-    </div>
+    ${tiText("Tenant ID", "tenantId", r[COLS.tenantId])}
     <div class="ti-field">
       <span class="ti-label">Tenant Notes</span>
       <textarea class="ti-textarea" rows="3"
