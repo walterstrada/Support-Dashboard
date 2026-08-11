@@ -211,7 +211,9 @@
   }
 
   /* ---- Daily landing page ---- */
-  .daily-hello { font-size: 34px; font-weight: 650; letter-spacing: -0.03em; margin-bottom: 28px; color: var(--ink); }
+  .daily-header { margin-bottom: 30px; }
+  .daily-title { font-size: 26px; font-weight: 650; letter-spacing: -0.03em; color: var(--ink); margin-bottom: 6px; }
+  .daily-desc { font-size: 14px; color: var(--ink-soft); line-height: 1.5; max-width: 620px; }
   .daily-section { margin-bottom: 36px; }
   .daily-h {
     font-size: 20px; font-weight: 650; letter-spacing: -0.02em; color: var(--ink);
@@ -1025,15 +1027,22 @@ function renderDashboard() {
 // Robustly parse Smartsheet dates (handles M/D/YY, MM/DD/YYYY, ISO)
 function parseDate(v) {
   if (!v) return 0;
-  const d = new Date(v);
-  if (!isNaN(d)) return d.getTime();
-  const m = String(v).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  const s = String(v).trim();
+  // ISO date like 2026-08-11 or 2026-08-11T00:00:00 — parse as LOCAL, not UTC
+  const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (iso) {
+    return new Date(parseInt(iso[1],10), parseInt(iso[2],10)-1, parseInt(iso[3],10)).getTime();
+  }
+  // M/D/YY or M/D/YYYY
+  const m = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
   if (m) {
     let yr = parseInt(m[3], 10);
     if (yr < 100) yr += 2000;
     return new Date(yr, parseInt(m[1],10)-1, parseInt(m[2],10)).getTime();
   }
-  return 0;
+  // Fallback for anything else
+  const d = new Date(s);
+  return isNaN(d) ? 0 : d.getTime();
 }
 
 // Distinct non-empty values for a column, sorted
@@ -1145,9 +1154,14 @@ function renderDaily(el) {
     ? `<div class="flat-list">${rows.map(r => renderRow(r, true)).join("")}</div>`
     : `<div class="daily-empty">Nothing here.</div>`;
 
+  const todayLabel = today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+
   el.innerHTML = `
     <div class="daily">
-      <h1 class="daily-hello">Hello</h1>
+      <div class="daily-header">
+        <h1 class="daily-title">Daily Triage</h1>
+        <p class="daily-desc">${todayLabel} — new inquiries and those awaiting a response, sorted by priority. Closed items are hidden.</p>
+      </div>
 
       <div class="daily-section">
         <h2 class="daily-h">Today</h2>
@@ -1940,12 +1954,9 @@ function openInSmartsheet(rowId) {
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function escapeAttr(s){ return escapeHtml(s); }
 function fmtDate(d){
-  // Smartsheet may return ISO or serial-ish; try to make it readable
-  const dt = new Date(d);
-  if (!isNaN(dt) && String(d).includes("-")) {
-    return dt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  }
-  return d;
+  const t = parseDate(d);
+  if (!t) return d || "";
+  return new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 let toastTimer;
 function toast(msg){
