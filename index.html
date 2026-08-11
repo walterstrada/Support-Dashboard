@@ -701,14 +701,14 @@ const COLS = {
 };
 
 const CATEGORY_COLORS = {
-  "Rent Payment Issue": "#2563a8",
-  "Billing Issue": "#7c5cbf",
-  "Lease Issue": "#b8621b",
   "Arrears Assistance": "#c0392b",
+  "Lease Issue": "#b8621b",
+  "Billing Issue": "#7c5cbf",
+  "RentCafe Issue": "#2563a8",
   "Maintenance Issue": "#2b8a5f",
-  "Relocation Question": "#0d8a94",
   "Property Management Issue": "#846b28",
-  "Tenant Association - General": "#c2417a",
+  "Relocation Question": "#0d8a94",
+  "Seeking Apartment": "#c2417a",
   "Other": "#6b7280",
   "Uncategorized": "#a0a4aa"
 };
@@ -729,17 +729,17 @@ const STRADA_STATUS_OPTIONS = ["New", "Responded", "Escalated", "Needs Response"
 const REPORTER_TYPE_OPTIONS = ["Tenant", "Legal Aid", "Tenant Association", "Union of Pinnacle Tenants"];
 const MAINTENANCE_IQ_OPTIONS = ["Added to Maintenance IQ", "Already in Maintenance IQ", "Not in Maintenance IQ"];
 const INQUIRY_NATURE_OPTIONS = ["Question", "Feedback", "Reporting Problem", "Request", "Missing Document", "Submission", "Correction Needed", "Unclear"];
-const INQUIRY_TYPE_OPTIONS = ["Rent Payment Issue", "Billing Issue", "Lease Issue", "Arrears Assistance", "Maintenance Issue", "Relocation Question", "Property Management Issue", "Tenant Association - General", "Other"];
+const INQUIRY_TYPE_OPTIONS = ["Arrears Assistance", "Lease Issue", "Billing Issue", "RentCafe Issue", "Maintenance Issue", "Property Management Issue", "Relocation Question", "Seeking Apartment", "Other"];
 const SUBCATEGORY_BY_TYPE = {
-  "Lease Issue": ["Succession Issue","Renewal Lease Not Received","Renewal Lease Has Errors","General Lease Question"],
-  "Billing Issue": ["Rent Bill Not Received","Rent Bill Has Errors","Rent Ledger Shows Incorrect Arrears Balance","General Billing Question"],
   "Arrears Assistance": ["Interested in Entering into Payment Plan","Interested in One Shot Deal Assistance","Interested in Qualifying for a Rental Subsidy Program","Interested in Settlement Agreement"],
-  "Rent Payment Issue": ["Did not receive RentCafe enrollment email","Trouble enrolling in RentCafe","Unable to pay rent in RentCafe","Rent check not cashed","Rent Payment Receipt"],
-  "Maintenance Issue": ["Trouble Submitting Maintenance Request in RentCafe","No Access to RentCafe","No Response on Maintenance Request","Issue Not Fully Repaired","Poor Quality Work / Needs Follow-Up","Issue Returned After Repair","Super is unresponsive","Porter is unresponsive","Super is not doing their job","Porter is not doing their job","General Super/Porter Issue","General Maintenance Issue"],
+  "Lease Issue": ["Succession Issue","Renewal Lease Not Received","Renewal Lease Has Errors","Lease Modification Request","General Lease Question"],
+  "Billing Issue": ["Rent Bill Not Received","Rent Bill Has Errors","Rent Ledger Shows Incorrect Arrears Balance","Requesting Rent Payment Receipt","Rent Check Not Cashed","Parking Payment","Security Deposit","Voucher Issue","General Billing Question"],
+  "RentCafe Issue": ["Requesting RentCafe Invite","Technical Issue with RentCafe","Unable to pay rent in RentCafe"],
+  "Maintenance Issue": ["Unit Repair Request","Common Area Repair Request","Buzzer/Intercom Not Working","Pest Issue","No Response on Maintenance Request","Maintenance Missed Appointment","Issue Not Fully Repaired"],
+  "Property Management Issue": ["Super Issue","Porter Issue","PM Personnel/Privacy Issue","Contacting Property Management","Utility Issue","General Property Management"],
   "Relocation Question": ["Upsize","Downsize","Reasonable Accommodation","Move to Another Building"],
-  "Other": ["Other - Other"],
-  "Property Management Issue": [],
-  "Tenant Association - General": []
+  "Seeking Apartment": ["Seeking Apartment"],
+  "Other": ["Other"]
 };
 
 const VALID_ADDRESSES = [
