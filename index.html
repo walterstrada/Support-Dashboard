@@ -361,10 +361,18 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;
   }
   .rh-spacer { flex: 1; min-width: 8px; }
-  .rh-needs {
-    font-size: 10.5px; font-weight: 700; color: #c0392b; background: #fbe9e7;
-    padding: 2px 8px; border-radius: 10px; flex-shrink: 0; letter-spacing: 0.02em;
+  .strada-pill {
+    font-size: 10.5px; font-weight: 700; padding: 3px 10px; border-radius: 11px;
+    flex-shrink: 0; letter-spacing: 0.02em; cursor: pointer; border: 1px solid transparent;
+    font-family: var(--font); transition: all 0.12s; white-space: nowrap;
   }
+  .strada-pill:hover { filter: brightness(0.96); }
+  .strada-pill.s-new       { background: #eef1f4; color: #4a5568; }
+  .strada-pill.s-responded { background: #eaf1f9; color: #2563a8; }
+  .strada-pill.s-escalated { background: #fdf2e7; color: #b8621b; }
+  .strada-pill.s-needs     { background: #fdecea; color: #c0392b; }
+  .strada-pill.s-closed    { background: #eef5e6; color: #5a8a3c; }
+  .strada-pill.s-unset     { background: var(--canvas); color: var(--ink-faint); border-color: var(--line); font-weight: 600; }
   .rh-loc { font-size: 12px; color: var(--ink-faint); flex-shrink: 0; white-space: nowrap; }
   .rh-caret { color: var(--ink-faint); display: flex; transition: transform 0.18s; flex-shrink: 0; }
   .row.expanded .rh-caret { transform: rotate(180deg); }
@@ -423,6 +431,17 @@
   }
   .readonly-field { margin-bottom: 12px; }
   .ro-value { display: block; font-size: 13px; color: var(--ink-soft); padding: 2px 10px; }
+
+  /* Binary Complete/Needed dropdown — blank/white when unset */
+  .binary-field { margin-bottom: 12px; }
+  .binary-select {
+    display: block; width: 160px; max-width: 100%;
+    font-size: 13px; font-family: var(--font); color: var(--ink);
+    padding: 6px 10px; border: 1px solid var(--line); border-radius: 7px;
+    background: var(--paper); cursor: pointer; transition: all 0.12s;
+  }
+  .binary-select:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+  .binary-select.unset { color: var(--ink-faint); background: #fff; }
 
   /* Tenant Info click-popover */
   .rh-name { cursor: pointer; }
@@ -625,10 +644,13 @@ const COLS = {
   description: "Description of Issue",
   notes: "Notes",
   followUp: "Follow-Up",
+  mgmtFollowUp: "Management Follow-Up",
+  tenantFollowUp: "Tenant Follow-Up",
   lastUpdated: "Last Updated",
   lastReply: "Last Reply",
   statusProgress: "Status Progress",
   replyStatus: "Reply Status",
+  stradaStatus: "Strada Status",
   flaggedForReview: "Flagged for Review",
   reviewNotes: "Review Notes",
   dateReceived: "Date Received",
@@ -649,6 +671,7 @@ const CATEGORY_COLORS = {
 };
 
 const STATUS_OPTIONS = ["Open", "In Progress", "Closed"];
+const STRADA_STATUS_OPTIONS = ["New", "Responded", "Escalated", "Needs Response", "Closed"];
 
 const VALID_ADDRESSES = [
   "244 Fieldstone Terrace","2800 Heath Avenue","3410 Kingsbridge Avenue",
@@ -1034,14 +1057,14 @@ function renderRow(r, showCategory) {
   const isExpanded = STATE.expanded[r._id] === true;
 
   return `
-    <div class="row ${reply === 'Needs' ? 'needs-reply' : ''} ${isExpanded ? 'expanded' : ''}" data-rowid="${r._id}">
+    <div class="row ${stradaClass(r[COLS.stradaStatus]) === 's-needs' ? 'needs-reply' : ''} ${isExpanded ? 'expanded' : ''}" data-rowid="${r._id}">
       <div class="row-header" onclick="toggleRow(${r._id})">
         <button class="status-pill ${st}" onclick="event.stopPropagation(); openStatusMenu(event, ${r._id});">${statusLabel(st)}</button>
         <span class="rh-name" onclick="event.stopPropagation(); toggleTenantInfo(${r._id}, event);">${escapeHtml(name)}</span>
         <span class="rh-cat" style="background:${catColor}1a;color:${catColor}">${escapeHtml(cat)}</span>
         ${sub ? `<span class="rh-sub">${escapeHtml(sub)}</span>` : ""}
         <span class="rh-spacer"></span>
-        ${reply === 'Needs' ? `<span class="rh-needs">Needs Reply</span>` : ""}
+        <button class="strada-pill ${stradaClass(r[COLS.stradaStatus])}" onclick="event.stopPropagation(); openStradaMenu(event, ${r._id});">${escapeHtml(r[COLS.stradaStatus] || 'Set status')}</button>
         ${loc ? `<span class="rh-loc">${escapeHtml(loc)}</span>` : ""}
         <span class="rh-caret"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></span>
       </div>
@@ -1060,6 +1083,8 @@ function renderRow(r, showCategory) {
             ${renderEditable(r._id, "description", "Description of Issue", desc)}
             ${renderEditable(r._id, "notes", "Notes", notes)}
             ${renderEditable(r._id, "followUp", "Follow-Up", followUp)}
+            ${renderBinaryDropdown(r._id, "mgmtFollowUp", "Management Follow-Up", r[COLS.mgmtFollowUp])}
+            ${renderBinaryDropdown(r._id, "tenantFollowUp", "Tenant Follow-Up", r[COLS.tenantFollowUp])}
             <div class="readonly-field">
               <span class="edit-label">Last Updated:</span>
               <span class="ro-value">${r[COLS.lastUpdated] ? escapeHtml(fmtDate(r[COLS.lastUpdated])) : ''}</span>
@@ -1100,6 +1125,21 @@ function renderEditable(rowId, field, label, value) {
     <div class="editable" data-field="${field}" data-rowid="${rowId}">
       <span class="edit-label">${label}:</span>
       <span class="edit-value ${has ? '' : 'empty'}" onclick="startEdit(${rowId}, '${field}', event)">${has ? escapeHtml(value) : 'Click to add…'}</span>
+    </div>`;
+}
+
+// Binary Complete/Needed dropdown that stays blank when unset
+function renderBinaryDropdown(rowId, field, label, value) {
+  const v = value || "";
+  const colName = COLS[field];
+  return `
+    <div class="binary-field">
+      <span class="edit-label">${label}:</span>
+      <select class="binary-select ${v ? '' : 'unset'}" onchange="saveField(${rowId}, ${JSON.stringify(colName).replace(/"/g,'&quot;')}, this.value)">
+        <option value="" ${v===''?'selected':''}></option>
+        <option value="Complete" ${v==='Complete'?'selected':''}>Complete</option>
+        <option value="Needed" ${v==='Needed'?'selected':''}>Needed</option>
+      </select>
     </div>`;
 }
 
@@ -1376,6 +1416,63 @@ async function changeStatus(rowId, newStatus) {
     row[COLS.status] = prev; // revert
     renderGroups();
     updateStatCounts();
+    toast("Couldn't update Smartsheet — try again");
+  }
+}
+
+// ---- Strada Status change ----
+function stradaClass(v) {
+  const s = (v || "").toLowerCase();
+  if (s.includes("escalat")) return "s-escalated";
+  if (s.includes("needs")) return "s-needs";
+  if (s.includes("respond")) return "s-responded";
+  if (s.includes("clos")) return "s-closed";
+  if (s.includes("new")) return "s-new";
+  return "s-unset";
+}
+
+function openStradaMenu(ev, rowId) {
+  ev.stopPropagation();
+  closeStatusMenu();
+  const menu = document.createElement("div");
+  menu.className = "status-menu";
+  menu.innerHTML = STRADA_STATUS_OPTIONS.map(s => `<button onclick="changeStrada(${rowId}, ${JSON.stringify(s).replace(/"/g,'&quot;')})">${s}</button>`).join("");
+  document.body.appendChild(menu);
+  const rect = ev.target.getBoundingClientRect();
+  menu.style.top = (rect.bottom + window.scrollY + 4) + "px";
+  let left = rect.left + window.scrollX;
+  if (left + 150 > window.scrollX + window.innerWidth - 12) left = window.scrollX + window.innerWidth - 150 - 12;
+  menu.style.left = left + "px";
+  activeMenu = menu;
+  setTimeout(() => document.addEventListener("click", closeStatusMenu, { once: true }), 0);
+}
+
+async function changeStrada(rowId, newStatus) {
+  closeStatusMenu();
+  const row = STATE.rows.find(r => r._id === rowId);
+  if (!row) return;
+  const prev = row[COLS.stradaStatus];
+  row[COLS.stradaStatus] = newStatus;  // optimistic
+  renderGroups();
+
+  try {
+    const res = await fetch(STATE.backendUrl, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        secret: STATE.secret,
+        action: "updateCell",
+        rowId: rowId,
+        columnName: COLS.stradaStatus,
+        value: newStatus
+      })
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || "update failed");
+    toast(`Strada: ${newStatus}`);
+  } catch (e) {
+    row[COLS.stradaStatus] = prev; // revert
+    renderGroups();
     toast("Couldn't update Smartsheet — try again");
   }
 }
