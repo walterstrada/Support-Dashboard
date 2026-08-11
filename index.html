@@ -210,6 +210,20 @@
     font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 5px;
   }
 
+  /* ---- Daily landing page ---- */
+  .daily-hello { font-size: 34px; font-weight: 650; letter-spacing: -0.03em; margin-bottom: 28px; color: var(--ink); }
+  .daily-section { margin-bottom: 36px; }
+  .daily-h {
+    font-size: 20px; font-weight: 650; letter-spacing: -0.02em; color: var(--ink);
+    padding-bottom: 9px; border-bottom: 2px solid var(--line); margin-bottom: 18px;
+  }
+  .daily-sub {
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--ink-faint); margin: 20px 0 9px;
+  }
+  .daily-section .daily-sub:first-of-type { margin-top: 0; }
+  .daily-empty { font-size: 13px; color: var(--ink-faint); font-style: italic; padding: 10px 4px 4px; }
+
   /* ---- Stat strip ---- */
   .stats {
     display: grid;
@@ -901,6 +915,7 @@ function renderDashboard() {
       <div class="brandmark"><span class="dot">S</span> Summit Support</div>
       <div class="spacer"></div>
       <div class="view-toggle">
+        <button class="vt ${STATE.viewMode==='daily'?'active':''}" onclick="setView('daily')">Daily</button>
         <button class="vt ${STATE.viewMode==='chronological'?'active':''}" onclick="setView('chronological')">Chronological</button>
         <button class="vt ${STATE.viewMode==='category'?'active':''}" onclick="setView('category')">Category</button>
       </div>
@@ -911,7 +926,7 @@ function renderDashboard() {
       </button>
     </div>
     <div class="wrap">
-      <aside class="sidebar">
+      ${STATE.viewMode === 'daily' ? '' : `<aside class="sidebar">
         <div class="side-sec">
           <div class="side-label">Status</div>
           <div class="side-btns">
@@ -983,10 +998,10 @@ function renderDashboard() {
           </div>
         </div>
         ${anyFilterActive() ? `<button class="clear-filters" onclick="clearFilters()">Clear all filters</button>` : ""}
-      </aside>
+      </aside>`}
 
       <div class="main">
-        <div class="stats">
+        ${STATE.viewMode === 'daily' ? '' : `<div class="stats">
           <div class="stat"><div class="label">${anyFilterActive() || STATE.search ? "Showing" : "Total inquiries"}</div><div class="num">${total}</div></div>
           <div class="stat accent-open"><div class="label">Open</div><div class="num">${open}</div></div>
           <div class="stat accent-progress"><div class="label">In progress</div><div class="num">${prog}</div></div>
@@ -998,7 +1013,7 @@ function renderDashboard() {
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input type="text" id="searchInput" placeholder="Search by name, address, or description…" value="${escapeAttr(STATE.search)}" oninput="onSearch(this.value)">
           </div>
-        </div>
+        </div>`}
 
         <div id="groups"></div>
       </div>
@@ -1088,9 +1103,81 @@ function applyFilters(rows) {
   return rows;
 }
 
+// ---- Daily landing page ----
+function ymd(d) { return d.getFullYear() + "-" + (d.getMonth()+1) + "-" + d.getDate(); }
+function dateMatches(value, target) {
+  if (!value) return false;
+  const t = parseDate(value);
+  if (!t) return false;
+  const d = new Date(t);
+  return ymd(d) === ymd(target);
+}
+// Strada sort order for the daily page (Closed already excluded)
+const STRADA_ORDER = { "New": 0, "Needs Response": 1, "Responded": 2, "Escalated": 3 };
+function stradaSort(a, b) {
+  const oa = STRADA_ORDER[a[COLS.stradaStatus]] ?? 99;
+  const ob = STRADA_ORDER[b[COLS.stradaStatus]] ?? 99;
+  if (oa !== ob) return oa - ob;
+  return parseDate(b[COLS.dateReceived]) - parseDate(a[COLS.dateReceived]);
+}
+function isClosed(r) { return (r[COLS.stradaStatus] || "").toLowerCase() === "closed"; }
+function isEmailCorr(r) { return (r[COLS.correspondence]||"").toLowerCase().includes("email"); }
+function isInPersonCorr(r) {
+  const c = (r[COLS.correspondence]||"").toLowerCase();
+  return c.includes("person");
+}
+
+function renderDaily(el) {
+  const today = new Date();
+  const yest = new Date(); yest.setDate(yest.getDate() - 1);
+  const all = STATE.rows.filter(r => !isClosed(r));
+
+  // Today
+  const todayNew = all.filter(r => dateMatches(r[COLS.dateReceived], today)).sort(stradaSort);
+  const todayNeeds = all.filter(r => dateMatches(r[COLS.lastReply], today)).sort(stradaSort);
+
+  // Yesterday
+  const yNewOffice = all.filter(r => dateMatches(r[COLS.dateReceived], yest) && isInPersonCorr(r)).sort(stradaSort);
+  const yNewEmail = all.filter(r => dateMatches(r[COLS.dateReceived], yest) && isEmailCorr(r)).sort(stradaSort);
+  const yNeeds = all.filter(r => dateMatches(r[COLS.lastReply], yest)).sort(stradaSort);
+
+  const section = (rows) => rows.length
+    ? `<div class="flat-list">${rows.map(r => renderRow(r, true)).join("")}</div>`
+    : `<div class="daily-empty">Nothing here.</div>`;
+
+  el.innerHTML = `
+    <div class="daily">
+      <h1 class="daily-hello">Hello</h1>
+
+      <div class="daily-section">
+        <h2 class="daily-h">Today</h2>
+        <div class="daily-sub">New</div>
+        ${section(todayNew)}
+        <div class="daily-sub">Needs Response</div>
+        ${section(todayNeeds)}
+      </div>
+
+      <div class="daily-section">
+        <h2 class="daily-h">Yesterday</h2>
+        <div class="daily-sub">New: Office Hours</div>
+        ${section(yNewOffice)}
+        <div class="daily-sub">New: Emails</div>
+        ${section(yNewEmail)}
+        <div class="daily-sub">Needs Response</div>
+        ${section(yNeeds)}
+      </div>
+    </div>`;
+}
+
 function renderGroups() {
-  let rows = applyFilters(STATE.rows.slice());
   const el = document.getElementById("groups");
+
+  if (STATE.viewMode === "daily") {
+    renderDaily(el);
+    return;
+  }
+
+  let rows = applyFilters(STATE.rows.slice());
 
   if (!rows.length) {
     el.innerHTML = `<div class="empty">No inquiries match your filters.</div>`;
