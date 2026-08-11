@@ -1180,7 +1180,7 @@ function renderRow(r, showCategory) {
               <span class="dm"><span class="dm-label">Date Received:</span> ${date ? escapeHtml(fmtDate(date)) : ''}</span>
               <span class="dm"><span class="dm-label">Last Reply:</span> ${r[COLS.lastReply] ? escapeHtml(fmtDate(r[COLS.lastReply])) : ''}</span>
               ${staff ? `<span class="dm"><span class="dm-label">Staff:</span> ${escapeHtml(staff)}</span>` : ""}
-              ${r[COLS.dateAlerted] ? `<span class="dm"><span class="dm-label">Date Alerted Mgmt Co.:</span> ${escapeHtml(fmtDate(r[COLS.dateAlerted]))}</span>` : ""}
+              <span class="dm"><span class="dm-label">Date Alerted Mgmt Co.:</span> ${r[COLS.dateAlerted] ? escapeHtml(fmtDate(r[COLS.dateAlerted])) : ''}</span>
             </div>
 
             ${renderEditable(r._id, "description", "Description of Issue", desc)}
