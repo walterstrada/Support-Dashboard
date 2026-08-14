@@ -370,6 +370,10 @@
   .status-pill:hover { filter: brightness(0.96); }
 
   .rh-name { font-weight: 600; font-size: 13.5px; color: var(--ink); flex-shrink: 0; }
+  .rh-date {
+    font-size: 12.5px; font-weight: 700; color: var(--ink-soft); flex-shrink: 0;
+    min-width: 46px; font-variant-numeric: tabular-nums;
+  }
   .rh-pill {
     font-family: var(--font); border: 1px solid transparent; cursor: pointer;
     transition: all 0.12s; flex-shrink: 0;
@@ -524,6 +528,15 @@
     padding: 4px 7px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); cursor: pointer;
   }
   .ti-mini-select:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+
+  /* More Info box (read-only) */
+  .more-info { width: 340px; }
+  .mi-field { margin-bottom: 11px; }
+  .mi-field:last-child { margin-bottom: 0; }
+  .mi-value { display: block; font-size: 13px; color: var(--ink); line-height: 1.45; }
+  .mi-blank { color: var(--ink-faint); }
+  .mi-link { font-size: 13px; color: var(--brand); font-weight: 600; text-decoration: none; }
+  .mi-link:hover { text-decoration: underline; }
 
   .act {
     border: 1px solid var(--line);
@@ -694,6 +707,10 @@ const COLS = {
   reporterType: "Reporter Type",
   maintenanceIQ: "Maintenance IQ",
   dateAlerted: "Date Alerted Management Company",
+  fieldStaff: "Field Staff",
+  officeHoursLocation: "Office Hours Location",
+  duplicateCounter: "Duplicate Name Counter",
+  attachmentLink: "Attachment Link",
   correspondence: "Correspondence",
   inquiryNature: "Inquiry Nature",
   pmCompany: "Property Mgmt Company",
@@ -1253,6 +1270,10 @@ function renderRow(r, showCategory) {
   const date = r[COLS.dateReceived] || "";
   const staff = r[COLS.staff] || "";
   const reply = normReply(r[COLS.replyStatus]);
+  // Most recent contact = later of Date Received and Last Reply
+  const recDate = r[COLS.dateReceived] || "";
+  const lastRep = r[COLS.lastReply] || "";
+  const mostRecent = (parseDate(lastRep) > parseDate(recDate)) ? lastRep : recDate;
   const cat = r[COLS.inquiryType] || "Uncategorized";
   const catColor = CATEGORY_COLORS[cat] || "#6b7280";
   const nature = r[COLS.inquiryNature] || "";
@@ -1262,12 +1283,13 @@ function renderRow(r, showCategory) {
   return `
     <div class="row strada-accent-${stradaClass(r[COLS.stradaStatus])} ${isExpanded ? 'expanded' : ''}" data-rowid="${r._id}">
       <div class="row-header" onclick="toggleRow(${r._id})">
-        <button class="status-pill ${st}" onclick="event.stopPropagation(); openStatusMenu(event, ${r._id});">${statusLabel(st)}</button>
+        <span class="rh-date">${mostRecent ? escapeHtml(fmtDate(mostRecent)) : ''}</span>
         <span class="rh-name" onclick="event.stopPropagation(); toggleTenantInfo(${r._id}, event);">${escapeHtml(name)}</span>
         <button class="rh-nature rh-pill" style="background:${natureColor}1a;color:${natureColor}" onclick="event.stopPropagation(); openNatureMenu(event, ${r._id});">${escapeHtml(nature || 'Nature')}</button>
         <button class="rh-cat rh-pill" style="background:${catColor}1a;color:${catColor}" onclick="event.stopPropagation(); openTypeMenu(event, ${r._id});">${escapeHtml(cat)}</button>
         <button class="rh-sub rh-pill" onclick="event.stopPropagation(); openSubMenu(event, ${r._id});">${escapeHtml(sub || 'Sub-category')}</button>
         <span class="rh-spacer"></span>
+        <button class="status-pill ${st}" onclick="event.stopPropagation(); openStatusMenu(event, ${r._id});">${statusLabel(st)}</button>
         <button class="strada-pill ${stradaClass(r[COLS.stradaStatus])}" onclick="event.stopPropagation(); openStradaMenu(event, ${r._id});">${escapeHtml(r[COLS.stradaStatus] || 'Set status')}</button>
         ${loc ? `<span class="rh-loc">${escapeHtml(loc)}</span>` : ""}
         <span class="rh-caret"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></span>
@@ -1314,6 +1336,10 @@ function renderRow(r, showCategory) {
             <button class="act" onclick='openInSmartsheet(${r._id})'>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               Edit in Smartsheet
+            </button>
+            <button class="act" onclick='openMoreInfo(event, ${r._id})'>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              More Info
             </button>
             <button class="act collapse-btn" onclick="toggleRow(${r._id})">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
@@ -1565,6 +1591,68 @@ function renderTenantInfoInto(box, rowId) {
       <span class="ti-label">Tenant Notes</span>
       <textarea class="ti-textarea" rows="3"
         onchange="saveField(${rowId}, ${JSON.stringify(COLS.tenantNotes).replace(/"/g,'&quot;')}, this.value)">${escapeHtml(r[COLS.tenantNotes]||"")}</textarea>
+    </div>`;
+}
+
+// ---- More Info box (read-only) ----
+let moreInfoRowId = null;
+
+function openMoreInfo(ev, rowId) {
+  if (ev) ev.stopPropagation();
+  const existing = document.getElementById("moreInfoBox");
+  if (existing && moreInfoRowId === rowId) { closeMoreInfo(); return; }
+  closeMoreInfo();
+
+  const box = document.createElement("div");
+  box.id = "moreInfoBox";
+  box.className = "tenant-info more-info";
+  box.onclick = (e) => e.stopPropagation();
+  document.body.appendChild(box);
+  renderMoreInfoInto(box, rowId);
+  moreInfoRowId = rowId;
+
+  const rect = ev.target.getBoundingClientRect();
+  const bw = 340;
+  let left = rect.left + window.scrollX;
+  if (left + bw > window.scrollX + window.innerWidth - 16) {
+    left = window.scrollX + window.innerWidth - bw - 16;
+  }
+  if (left < window.scrollX + 8) left = window.scrollX + 8;
+  box.style.left = left + "px";
+  box.style.top = (rect.bottom + window.scrollY + 6) + "px";
+
+  setTimeout(() => document.addEventListener("click", closeMoreInfo, { once: true }), 0);
+}
+
+function closeMoreInfo() {
+  const b = document.getElementById("moreInfoBox");
+  if (b) b.remove();
+  moreInfoRowId = null;
+}
+
+function renderMoreInfoInto(box, rowId) {
+  const r = STATE.rows.find(x => x._id === rowId);
+  if (!r) return;
+  const miRow = (label, value) => `
+    <div class="mi-field">
+      <span class="ti-label">${label}</span>
+      <span class="mi-value">${value || '<span class="mi-blank">—</span>'}</span>
+    </div>`;
+
+  const attach = r[COLS.attachmentLink];
+  const attachHtml = attach
+    ? `<a href="${escapeAttr(attach)}" target="_blank" rel="noopener" class="mi-link">Open attachment</a>`
+    : '<span class="mi-blank">—</span>';
+
+  box.innerHTML = `
+    <div class="ti-title">More Info</div>
+    ${miRow("Correspondence", escapeHtml(r[COLS.correspondence]||""))}
+    ${miRow("Field Staff", escapeHtml(r[COLS.fieldStaff]||""))}
+    ${miRow("Office Hours Location", escapeHtml(r[COLS.officeHoursLocation]||""))}
+    ${miRow("# of inquiries from this tenant", escapeHtml(r[COLS.duplicateCounter]||""))}
+    <div class="mi-field">
+      <span class="ti-label">Attachment</span>
+      <span class="mi-value">${attachHtml}</span>
     </div>`;
 }
 function onSearch(v) { STATE.search = v; renderGroups(); updateStatCounts(); }
