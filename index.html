@@ -395,7 +395,7 @@
   .strada-pill:hover { filter: brightness(0.96); }
   .strada-pill.s-new       { background: #eef1f4; color: #4a5568; }
   .strada-pill.s-responded { background: #eaf1f9; color: #2563a8; }
-  .strada-pill.s-escalated { background: #fdf2e7; color: #b8621b; }
+  .strada-pill.s-escalated { background: #eef0f4; color: #5b5f78; }
   .strada-pill.s-needs     { background: #fdecea; color: #c0392b; }
   .strada-pill.s-closed    { background: #eef5e6; color: #5a8a3c; }
   .strada-pill.s-unset     { background: var(--canvas); color: var(--ink-faint); border-color: var(--line); font-weight: 600; }
@@ -406,7 +406,7 @@
   /* Strada-status left accent on the whole row (matches pill colors) */
   .row.strada-accent-s-new       { box-shadow: inset 3px 0 0 #94a0ad; }
   .row.strada-accent-s-responded { box-shadow: inset 3px 0 0 #2563a8; }
-  .row.strada-accent-s-escalated { box-shadow: inset 3px 0 0 #d98a3a; }
+  .row.strada-accent-s-escalated { box-shadow: inset 3px 0 0 #7c81a0; }
   .row.strada-accent-s-needs     { box-shadow: inset 3px 0 0 #d9534f; }
   .row.strada-accent-s-closed    { box-shadow: inset 3px 0 0 #5a8a3c; }
   .row.strada-accent-s-needs .row-header { background: #fef9f8; }
@@ -475,6 +475,20 @@
 
   /* Row holding Last Updated + the two follow-up dropdowns */
   .followup-row { display: flex; gap: 22px; align-items: flex-start; flex-wrap: wrap; }
+  .assign-field { min-width: 150px; }
+  .assign-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; max-width: 200px; }
+  .assign-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--brand-soft); color: var(--brand-ink);
+    font-size: 11.5px; font-weight: 500; padding: 3px 5px 3px 9px;
+    border-radius: 12px; line-height: 1.3;
+  }
+  .assign-x {
+    display: flex; align-items: center; justify-content: center;
+    border: none; background: rgba(28,64,48,0.12); color: var(--brand-ink);
+    width: 15px; height: 15px; border-radius: 50%; cursor: pointer; padding: 0;
+  }
+  .assign-x:hover { background: rgba(28,64,48,0.28); }
   .followup-row .fu-updated { margin-bottom: 12px; }
 
   /* Tenant Info click-popover */
@@ -722,6 +736,7 @@ const COLS = {
   followUp: "Follow-Up",
   mgmtFollowUp: "Management Follow-Up",
   tenantFollowUp: "Tenant Follow-Up",
+  assignFollowUp: "Strada Staff Handling Follow Up",
   lastUpdated: "Last Updated",
   lastReply: "Last Reply",
   statusProgress: "Status Progress",
@@ -761,6 +776,13 @@ const STATUS_OPTIONS = ["Open", "In Progress", "Closed"];
 const STRADA_STATUS_OPTIONS = ["New", "Responded", "Escalated", "Needs Response", "Closed"];
 const REPORTER_TYPE_OPTIONS = ["Tenant", "Legal Aid", "Tenant Association", "Union of Pinnacle Tenants"];
 const MAINTENANCE_IQ_OPTIONS = ["Added to Maintenance IQ", "Already in Maintenance IQ", "Not in Maintenance IQ"];
+const FOLLOWUP_STAFF_OPTIONS = ["Dara Yaskil", "Walter Goldberg", "David Ross", "Ella Kaplan"];
+// Parse a multi-select value (comma-joined string or array) into an array of names
+function parseMulti(v) {
+  if (Array.isArray(v)) return v.filter(Boolean);
+  if (!v) return [];
+  return String(v).split(",").map(s => s.trim()).filter(Boolean);
+}
 const INQUIRY_NATURE_OPTIONS = ["Question", "Feedback", "Reporting Problem", "Request", "Missing Document", "Submission", "Correction Needed", "Unclear"];
 const INQUIRY_TYPE_OPTIONS = ["Arrears Assistance", "Lease Issue", "Billing Issue", "RentCafe Issue", "Maintenance Issue", "Property Management Issue", "Relocation Question", "Seeking Apartment", "Other"];
 const SUBCATEGORY_BY_TYPE = {
@@ -829,7 +851,8 @@ let STATE = {
     inquiryType: [],         // multi-select dropdown
     subCategory: [],         // multi-select dropdown
     mgmtFollowUp: [],        // multi-select buttons: Complete / Needed
-    tenantFollowUp: []       // multi-select buttons: Complete / Needed
+    tenantFollowUp: [],      // multi-select buttons: Complete / Needed
+    assignFollowUp: []       // multi-select buttons: staff names
   },
   openGroups: {},
   expanded: {}
@@ -1016,6 +1039,14 @@ function renderDashboard() {
             ).join("")}
           </div>
         </div>
+        <div class="side-sec">
+          <div class="side-label">Assigned To</div>
+          <div class="side-btns">
+            ${FOLLOWUP_STAFF_OPTIONS.map(v =>
+              `<button class="side-btn ${STATE.filters.assignFollowUp.includes(v)?'on':''}" onclick="toggleFilter('assignFollowUp', ${JSON.stringify(v).replace(/"/g,'&quot;')})">${escapeHtml(v)}</button>`
+            ).join("")}
+          </div>
+        </div>
         ${anyFilterActive() ? `<button class="clear-filters" onclick="clearFilters()">Clear all filters</button>` : ""}
       </aside>`}
 
@@ -1093,7 +1124,7 @@ function anyFilterActive() {
   const f = STATE.filters;
   return f.status.length || f.stradaStatus.length || f.correspondence.length || f.pmCompany.length || f.napmGroup.length ||
          f.inquiryNature.length || f.inquiryType.length || f.subCategory.length ||
-         f.mgmtFollowUp.length || f.tenantFollowUp.length;
+         f.mgmtFollowUp.length || f.tenantFollowUp.length || f.assignFollowUp.length;
 }
 
 // Apply all active filters + search to the row set
@@ -1116,6 +1147,12 @@ function applyFilters(rows) {
   if (f.subCategory.length) rows = rows.filter(r => f.subCategory.includes(r[COLS.subCategory]||""));
   if (f.mgmtFollowUp.length) rows = rows.filter(r => f.mgmtFollowUp.includes(r[COLS.mgmtFollowUp]||""));
   if (f.tenantFollowUp.length) rows = rows.filter(r => f.tenantFollowUp.includes(r[COLS.tenantFollowUp]||""));
+  if (f.assignFollowUp.length) {
+    rows = rows.filter(r => {
+      const assignees = parseMulti(r[COLS.assignFollowUp]);
+      return f.assignFollowUp.some(sel => assignees.includes(sel));
+    });
+  }
 
   const q = STATE.search.trim().toLowerCase();
   if (q) {
@@ -1317,6 +1354,7 @@ function renderRow(r, showCategory) {
               </div>
               ${renderBinaryDropdown(r._id, "mgmtFollowUp", "Management Follow-Up", r[COLS.mgmtFollowUp])}
               ${renderBinaryDropdown(r._id, "tenantFollowUp", "Tenant Follow-Up", r[COLS.tenantFollowUp])}
+              ${renderAssignTo(r._id, r[COLS.assignFollowUp])}
             </div>
           </div>
 
@@ -1374,6 +1412,70 @@ function renderBinaryDropdown(rowId, field, label, value, options) {
         ${opts.map(o => `<option value="${escapeAttr(o)}" ${v===o?'selected':''}>${escapeHtml(o)}</option>`).join("")}
       </select>
     </div>`;
+}
+
+// "Assign to" — multi-select staff for the follow-up (writes back an array)
+function renderAssignTo(rowId, value) {
+  const selected = parseMulti(value);
+  const available = FOLLOWUP_STAFF_OPTIONS.filter(o => !selected.includes(o));
+  const chips = selected.length ? `
+    <div class="assign-chips">
+      ${selected.map(n => `
+        <span class="assign-chip">${escapeHtml(n)}
+          <button class="assign-x" onclick="removeAssignee(${rowId}, ${JSON.stringify(n).replace(/"/g,'&quot;')})" title="Remove">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </span>`).join("")}
+    </div>` : "";
+  return `
+    <div class="assign-field">
+      <span class="edit-label">Assign to:</span>
+      <select class="binary-select ${selected.length ? '' : 'unset'}" onchange="addAssignee(${rowId}, this.value); this.value='';">
+        <option value="">${selected.length ? "Add…" : "Unassigned"}</option>
+        ${available.map(o => `<option value="${escapeAttr(o)}">${escapeHtml(o)}</option>`).join("")}
+      </select>
+      ${chips}
+    </div>`;
+}
+
+async function addAssignee(rowId, name) {
+  if (!name) return;
+  const row = STATE.rows.find(r => r._id === rowId);
+  if (!row) return;
+  const cur = parseMulti(row[COLS.assignFollowUp]);
+  if (cur.includes(name)) return;
+  const next = cur.concat([name]);
+  await saveAssignees(rowId, next);
+}
+async function removeAssignee(rowId, name) {
+  const row = STATE.rows.find(r => r._id === rowId);
+  if (!row) return;
+  const next = parseMulti(row[COLS.assignFollowUp]).filter(n => n !== name);
+  await saveAssignees(rowId, next);
+}
+async function saveAssignees(rowId, arr) {
+  const row = STATE.rows.find(r => r._id === rowId);
+  if (!row) return;
+  const prev = row[COLS.assignFollowUp];
+  row[COLS.assignFollowUp] = arr.join(", "); // optimistic (display form)
+  renderGroups();
+  try {
+    const res = await fetch(STATE.backendUrl, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        secret: STATE.secret, action: "updateCell",
+        rowId: rowId, columnName: COLS.assignFollowUp, value: arr  // array → backend sends MULTI_PICKLIST
+      })
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || "update failed");
+    toast("Saved");
+  } catch (e) {
+    row[COLS.assignFollowUp] = prev; // revert
+    renderGroups();
+    toast("Couldn't save — try again");
+  }
 }
 
 // ============================================================
@@ -1693,7 +1795,7 @@ function removeMulti(key, value) {
   renderDashboard();
 }
 function clearFilters() {
-  STATE.filters = { status: [], stradaStatus: [], correspondence: [], pmCompany: [], napmGroup: [], inquiryNature: [], inquiryType: [], subCategory: [], mgmtFollowUp: [], tenantFollowUp: [] };
+  STATE.filters = { status: [], stradaStatus: [], correspondence: [], pmCompany: [], napmGroup: [], inquiryNature: [], inquiryType: [], subCategory: [], mgmtFollowUp: [], tenantFollowUp: [], assignFollowUp: [] };
   renderDashboard();
 }
 
