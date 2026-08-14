@@ -571,6 +571,12 @@
   .act.primary { background: var(--brand); color: #fff; border-color: var(--brand); }
   .act.primary:hover { background: #234c3c; color: #fff; }
   .act.collapse-btn { color: var(--ink-faint); margin-top: 4px; }
+  .delete-check {
+    display: flex; align-items: center; gap: 7px; margin-top: 10px;
+    font-size: 11.5px; color: var(--ink-faint); cursor: pointer; user-select: none;
+  }
+  .delete-check input { cursor: pointer; accent-color: #c0392b; margin: 0; }
+  .delete-check:hover { color: #c0392b; }
 
   /* ---- Status dropdown ---- */
   .status-menu {
@@ -737,6 +743,7 @@ const COLS = {
   mgmtFollowUp: "Management Follow-Up",
   tenantFollowUp: "Tenant Follow-Up",
   assignFollowUp: "Strada Staff Handling Follow Up",
+  deleteFlag: "Delete?",
   lastUpdated: "Last Updated",
   lastReply: "Last Reply",
   statusProgress: "Status Progress",
@@ -782,6 +789,10 @@ function parseMulti(v) {
   if (Array.isArray(v)) return v.filter(Boolean);
   if (!v) return [];
   return String(v).split(",").map(s => s.trim()).filter(Boolean);
+}
+// Interpret a Smartsheet checkbox value (boolean true, or "true"/"1" strings)
+function isChecked(v) {
+  return v === true || v === "true" || v === 1 || v === "1";
 }
 const INQUIRY_NATURE_OPTIONS = ["Question", "Feedback", "Reporting Problem", "Request", "Missing Document", "Submission", "Correction Needed", "Unclear"];
 const INQUIRY_TYPE_OPTIONS = ["Arrears Assistance", "Lease Issue", "Billing Issue", "RentCafe Issue", "Maintenance Issue", "Property Management Issue", "Relocation Question", "Seeking Apartment", "Other"];
@@ -1130,6 +1141,16 @@ function anyFilterActive() {
 // Apply all active filters + search to the row set
 function applyFilters(rows) {
   const f = STATE.filters;
+
+  // Soft-deleted rows (Delete? checked) are hidden everywhere EXCEPT when the
+  // current search matches the tenant's name — then they resurface.
+  const q0 = STATE.search.trim().toLowerCase();
+  rows = rows.filter(r => {
+    if (!isChecked(r[COLS.deleteFlag])) return true;              // not flagged → always eligible
+    if (!q0) return false;                                        // flagged + no search → hide
+    return (r[COLS.name]||"").toLowerCase().includes(q0);         // flagged → show only on name match
+  });
+
   if (f.status.length) rows = rows.filter(r => f.status.includes(normStatus(r[COLS.status])));
   if (f.stradaStatus.length) rows = rows.filter(r => f.stradaStatus.includes(r[COLS.stradaStatus]||""));
   if (f.correspondence.length) {
@@ -1193,7 +1214,7 @@ function isInPersonCorr(r) {
 function renderDaily(el) {
   const today = new Date();
   const yest = new Date(); yest.setDate(yest.getDate() - 1);
-  const all = STATE.rows.filter(r => !isClosed(r));
+  const all = STATE.rows.filter(r => !isClosed(r) && !isChecked(r[COLS.deleteFlag]));
 
   // Today
   const todayNew = all.filter(r => dateMatches(r[COLS.dateReceived], today)).sort(stradaSort);
@@ -1383,6 +1404,10 @@ function renderRow(r, showCategory) {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
               Collapse
             </button>
+            <label class="delete-check" onclick="event.stopPropagation();">
+              <input type="checkbox" ${isChecked(r[COLS.deleteFlag]) ? 'checked' : ''} onchange="toggleDelete(${r._id}, this.checked)">
+              <span>Request deletion</span>
+            </label>
           </div>
         </div>
       </div>
@@ -1473,6 +1498,32 @@ async function saveAssignees(rowId, arr) {
     toast("Saved");
   } catch (e) {
     row[COLS.assignFollowUp] = prev; // revert
+    renderGroups();
+    toast("Couldn't save — try again");
+  }
+}
+
+// Toggle the "Delete?" checkbox (soft-delete request). Sends a boolean to Smartsheet.
+async function toggleDelete(rowId, checked) {
+  const row = STATE.rows.find(r => r._id === rowId);
+  if (!row) return;
+  const prev = row[COLS.deleteFlag];
+  row[COLS.deleteFlag] = checked; // optimistic
+  renderGroups();
+  try {
+    const res = await fetch(STATE.backendUrl, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        secret: STATE.secret, action: "updateCell",
+        rowId: rowId, columnName: COLS.deleteFlag, value: checked  // boolean for checkbox column
+      })
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || "update failed");
+    toast(checked ? "Marked for deletion" : "Unmarked");
+  } catch (e) {
+    row[COLS.deleteFlag] = prev; // revert
     renderGroups();
     toast("Couldn't save — try again");
   }
