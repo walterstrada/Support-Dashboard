@@ -239,6 +239,7 @@
     gap: 13px;
     margin-bottom: 26px;
   }
+  .stats-6 { grid-template-columns: repeat(6, 1fr); }
   .stat {
     background: var(--paper);
     border: 1px solid var(--line);
@@ -250,6 +251,11 @@
   .stat.accent-open .num { color: var(--open); }
   .stat.accent-progress .num { color: var(--progress); }
   .stat.accent-closed .num { color: var(--closed); }
+  .stat.accent-snew .num { color: #4a5568; }
+  .stat.accent-sresponded .num { color: #2563a8; }
+  .stat.accent-sescalated .num { color: #5b5f78; }
+  .stat.accent-sneeds .num { color: #c0392b; }
+  .stat.accent-sclosed .num { color: #5a8a3c; }
 
   /* ---- Toolbar ---- */
   .toolbar {
@@ -672,8 +678,11 @@
   @media (max-width: 1100px) {
     .rh-sub { display: none; }
   }
+  @media (max-width: 1100px) {
+    .stats-6 { grid-template-columns: repeat(3, 1fr); }
+  }
   @media (max-width: 720px) {
-    .stats { grid-template-columns: repeat(2, 1fr); }
+    .stats, .stats-6 { grid-template-columns: repeat(2, 1fr); }
     .row-header { flex-wrap: wrap; gap: 8px; }
     .rh-loc { flex-basis: 100%; }
     .detail-grid { flex-direction: column; }
@@ -958,9 +967,12 @@ function renderDashboard() {
   // Stats now reflect what's actually being shown (after filters + search)
   const visible = applyFilters(STATE.rows.slice());
   const total = visible.length;
-  const open = visible.filter(r => normStatus(r[COLS.status]) === "Open").length;
-  const prog = visible.filter(r => normStatus(r[COLS.status]) === "Progress").length;
-  const closed = visible.filter(r => normStatus(r[COLS.status]) === "Closed").length;
+  const sCount = (name) => visible.filter(r => (r[COLS.stradaStatus]||"") === name).length;
+  const sNew = sCount("New");
+  const sResponded = sCount("Responded");
+  const sEscalated = sCount("Escalated");
+  const sNeeds = sCount("Needs Response");
+  const sClosed = sCount("Closed");
 
   // Distinct values for the dropdown filters, pulled from the data
   const natures = distinctValues(COLS.inquiryNature);
@@ -986,14 +998,6 @@ function renderDashboard() {
     </div>
     <div class="wrap">
       ${STATE.viewMode === 'daily' ? '' : `<aside class="sidebar">
-        <div class="side-sec">
-          <div class="side-label">Status</div>
-          <div class="side-btns">
-            ${["Open","Progress","Closed"].map(s =>
-              `<button class="side-btn ${STATE.filters.status.includes(s)?'on':''}" onclick="toggleFilter('status','${s}')">${statusLabel(s)}</button>`
-            ).join("")}
-          </div>
-        </div>
         <div class="side-sec">
           <div class="side-label">Strada Status</div>
           <div class="side-btns">
@@ -1068,11 +1072,13 @@ function renderDashboard() {
       </aside>`}
 
       <div class="main">
-        ${STATE.viewMode === 'daily' ? '' : `<div class="stats">
-          <div class="stat"><div class="label">${anyFilterActive() || STATE.search ? "Showing" : "Total inquiries"}</div><div class="num">${total}</div></div>
-          <div class="stat accent-open"><div class="label">Open</div><div class="num">${open}</div></div>
-          <div class="stat accent-progress"><div class="label">In progress</div><div class="num">${prog}</div></div>
-          <div class="stat accent-closed"><div class="label">Closed</div><div class="num">${closed}</div></div>
+        ${STATE.viewMode === 'daily' ? '' : `<div class="stats stats-6">
+          <div class="stat"><div class="label">${anyFilterActive() || STATE.search ? "Showing" : "Total"}</div><div class="num">${total}</div></div>
+          <div class="stat accent-snew"><div class="label">New</div><div class="num">${sNew}</div></div>
+          <div class="stat accent-sresponded"><div class="label">Responded</div><div class="num">${sResponded}</div></div>
+          <div class="stat accent-sescalated"><div class="label">Escalated</div><div class="num">${sEscalated}</div></div>
+          <div class="stat accent-sneeds"><div class="label">Needs Response</div><div class="num">${sNeeds}</div></div>
+          <div class="stat accent-sclosed"><div class="label">Closed</div><div class="num">${sClosed}</div></div>
         </div>
 
         <div class="toolbar">
@@ -1353,7 +1359,6 @@ function renderRow(r, showCategory) {
         <button class="rh-cat rh-pill" style="background:${catColor}1a;color:${catColor}" onclick="event.stopPropagation(); openTypeMenu(event, ${r._id});">${escapeHtml(cat)}</button>
         <button class="rh-sub rh-pill" onclick="event.stopPropagation(); openSubMenu(event, ${r._id});">${escapeHtml(sub || 'Sub-category')}</button>
         <span class="rh-spacer"></span>
-        <button class="status-pill ${st}" onclick="event.stopPropagation(); openStatusMenu(event, ${r._id});">${statusLabel(st)}</button>
         <button class="strada-pill ${stradaClass(r[COLS.stradaStatus])}" onclick="event.stopPropagation(); openStradaMenu(event, ${r._id});">${escapeHtml(r[COLS.stradaStatus] || 'Set status')}</button>
         ${loc ? `<span class="rh-loc">${escapeHtml(loc)}</span>` : ""}
         <span class="rh-caret"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></span>
@@ -1820,11 +1825,14 @@ function onSearch(v) { STATE.search = v; renderGroups(); updateStatCounts(); }
 function updateStatCounts() {
   const visible = applyFilters(STATE.rows.slice());
   const nums = document.querySelectorAll(".stat .num");
-  if (nums.length === 4) {
+  if (nums.length === 6) {
+    const sc = (name) => visible.filter(r => (r[COLS.stradaStatus]||"") === name).length;
     nums[0].textContent = visible.length;
-    nums[1].textContent = visible.filter(r => normStatus(r[COLS.status]) === "Open").length;
-    nums[2].textContent = visible.filter(r => normStatus(r[COLS.status]) === "Progress").length;
-    nums[3].textContent = visible.filter(r => normStatus(r[COLS.status]) === "Closed").length;
+    nums[1].textContent = sc("New");
+    nums[2].textContent = sc("Responded");
+    nums[3].textContent = sc("Escalated");
+    nums[4].textContent = sc("Needs Response");
+    nums[5].textContent = sc("Closed");
   }
   const meta = document.querySelector(".topbar .meta");
   if (meta) meta.textContent = (visible.length === STATE.rows.length) ? `${visible.length} total` : `${visible.length} of ${STATE.rows.length}`;
