@@ -1359,8 +1359,8 @@ function renderRow(r, showCategory) {
         <button class="rh-cat rh-pill" style="background:${catColor}1a;color:${catColor}" onclick="event.stopPropagation(); openTypeMenu(event, ${r._id});">${escapeHtml(cat)}</button>
         <button class="rh-sub rh-pill" onclick="event.stopPropagation(); openSubMenu(event, ${r._id});">${escapeHtml(sub || 'Sub-category')}</button>
         <span class="rh-spacer"></span>
-        <button class="strada-pill ${stradaClass(r[COLS.stradaStatus])}" onclick="event.stopPropagation(); openStradaMenu(event, ${r._id});">${escapeHtml(r[COLS.stradaStatus] || 'Set status')}</button>
         ${loc ? `<span class="rh-loc">${escapeHtml(loc)}</span>` : ""}
+        <button class="strada-pill ${stradaClass(r[COLS.stradaStatus])}" onclick="event.stopPropagation(); openStradaMenu(event, ${r._id});">${escapeHtml(r[COLS.stradaStatus] || 'Set status')}</button>
         <span class="rh-caret"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></span>
       </div>
 
