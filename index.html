@@ -32,7 +32,33 @@
     --radius-sm: 7px;
     --shadow: 0 1px 2px rgba(26,29,33,0.04), 0 4px 12px rgba(26,29,33,0.03);
     --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
   }
+
+  /* ---- Dark theme (the "terminal" palette) — applies site-wide ---- */
+  [data-theme="dark"] {
+    --ink: #F2F4F3;
+    --ink-soft: #A6ACB2;
+    --ink-faint: #808791;
+    --line: #232629;
+    --line-soft: #191C1F;
+    --paper: #0F1113;
+    --canvas: #0B0C0E;
+    --brand: #00D68F;
+    --brand-soft: rgba(0,214,143,0.14);
+    --brand-ink: #00D68F;
+
+    --open: #FBBF24;
+    --open-bg: rgba(251,191,36,0.14);
+    --progress: #2563a8;
+    --progress-bg: rgba(37,99,168,0.16);
+    --closed: #00D68F;
+    --closed-bg: rgba(0,214,143,0.14);
+
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 14px rgba(0,0,0,0.25);
+  }
+  [data-theme="dark"] body { background: var(--canvas); }
+  [data-theme="dark"] ::selection { background: rgba(0,214,143,0.25); }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -83,6 +109,16 @@
     align-items: center;
     gap: 7px;
   }
+  .theme-toggle {
+    display: flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px;
+    border: 1px solid var(--line); background: var(--paper); color: var(--ink-soft);
+    border-radius: var(--radius-sm); cursor: pointer; transition: all 0.12s;
+  }
+  .theme-toggle:hover { background: var(--canvas); color: var(--ink); }
+  .theme-toggle .icon-moon { display: none; }
+  [data-theme="dark"] .theme-toggle .icon-sun { display: none; }
+  [data-theme="dark"] .theme-toggle .icon-moon { display: block; }
   .topbar .refresh {
     border: 1px solid var(--line);
     background: var(--paper);
@@ -486,7 +522,7 @@
     background: var(--paper); cursor: pointer; transition: all 0.12s;
   }
   .binary-select:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
-  .binary-select.unset { color: var(--ink-faint); background: #fff; }
+  .binary-select.unset { color: var(--ink-faint); background: var(--paper); }
 
   /* Row holding Last Updated + the two follow-up dropdowns */
   .followup-row { display: flex; gap: 22px; align-items: flex-start; flex-wrap: wrap; }
@@ -696,19 +732,13 @@
   }
 
 /* ============================================================
-   TERMINAL THEME — scoped to the Reports tab only.
-   Everything below lives under .term so the rest of the app
-   (Daily / Chronological / Category) is completely unaffected.
+   REPORTS TAB — uses the SAME shared theme variables as the
+   rest of the app, so it automatically follows the site-wide
+   light/dark toggle instead of carrying its own fixed palette.
    ============================================================ */
 .term {
-  --bg: #0B0C0E; --surface: #0F1113;
-  --border: #191C1F; --border2: #232629;
-  --t1: #F2F4F3; --t2: #A6ACB2; --t3: #808791;
-  --green: #00D68F; --red: #FF5C5C; --amber: #FBBF24;
-  --mono: "IBM Plex Mono", ui-monospace, monospace;
-
-  background: var(--bg);
-  color: var(--t1);
+  background: var(--canvas);
+  color: var(--ink);
   border-radius: var(--radius);
   padding: 22px 24px 28px;
   margin: -4px 0 20px;
@@ -718,27 +748,27 @@
 .term-header { margin-bottom: 20px; }
 .term-title {
   font-size: clamp(22px, 2.4vw, 28px); font-weight: 650; letter-spacing: -0.01em;
-  color: var(--t1); text-transform: capitalize; margin-bottom: 5px;
+  color: var(--ink); margin-bottom: 5px;
 }
-.term-desc { font-size: 13px; color: var(--t3); line-height: 1.5; max-width: 640px; }
+.term-desc { font-size: 13px; color: var(--ink-faint); line-height: 1.5; max-width: 640px; }
 
-.term-tiles { display: flex; flex-wrap: wrap; gap: 0; border-top: 1px solid var(--border); border-left: 1px solid var(--border); margin-bottom: 22px; }
-.term-tile { flex: 1; min-width: 140px; padding: 14px 16px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-.term-tile-label { font-size: 11.5px; color: var(--t3); text-transform: capitalize; margin-bottom: 8px; }
+.term-tiles { display: flex; flex-wrap: wrap; gap: 0; border-top: 1px solid var(--line); border-left: 1px solid var(--line); margin-bottom: 22px; }
+.term-tile { flex: 1; min-width: 140px; padding: 14px 16px; background: var(--paper); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.term-tile-label { font-size: 11.5px; color: var(--ink-faint); margin-bottom: 8px; }
 .term-tile-num {
   font-family: var(--mono); font-variant-numeric: tabular-nums;
-  font-size: clamp(20px, 2vw, 27px); font-weight: 600; letter-spacing: -0.01em; color: var(--t1);
+  font-size: clamp(20px, 2vw, 27px); font-weight: 600; letter-spacing: -0.01em; color: var(--ink);
 }
-.term-tile-num .term-of { font-size: 14px; color: var(--t3); font-weight: 500; }
-.term-tile.accent-green .term-tile-num { color: var(--green); }
-.term-tile.accent-red .term-tile-num { color: var(--red); }
-.term-tile.accent-amber .term-tile-num { color: var(--amber); }
+.term-tile-num .term-of { font-size: 14px; color: var(--ink-faint); font-weight: 500; }
+.term-tile.accent-green .term-tile-num { color: var(--closed); }
+.term-tile.accent-red .term-tile-num { color: #d9534f; }
+.term-tile.accent-amber .term-tile-num { color: var(--open); }
 
 .term-section { margin-bottom: 26px; }
-.term-h { font-size: 13px; font-weight: 600; color: var(--t2); text-transform: capitalize; margin-bottom: 12px; letter-spacing: 0.01em; }
-.term-sub { font-size: 11.5px; color: var(--t3); font-weight: 500; }
+.term-h { font-size: 13px; font-weight: 600; color: var(--ink-soft); margin-bottom: 12px; letter-spacing: 0.01em; }
+.term-sub { font-size: 11.5px; color: var(--ink-faint); font-weight: 500; }
 
-.term-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.term-panel { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .term-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
 .term-cols .term-panel:first-child { border-right: none; }
 .term-cols-row { display: flex; gap: 20px; flex-wrap: wrap; align-items: stretch; margin-bottom: 26px; }
@@ -746,31 +776,31 @@
 
 .term-chart-wrap { height: 240px; padding: 16px 18px 6px; }
 .term-legend { display: flex; gap: 18px; padding: 0 18px 16px; flex-wrap: wrap; }
-.term-leg { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--t2); }
+.term-leg { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-soft); }
 .term-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .term-line { width: 12px; height: 2px; border-radius: 1px; display: inline-block; }
 
 .term-table { width: 100%; border-collapse: collapse; }
 .term-table th {
-  text-align: left; font-size: 10.5px; font-weight: 600; text-transform: capitalize;
-  letter-spacing: 0.01em; color: var(--t3); padding: 10px 16px;
-  border-bottom: 1px solid var(--border);
+  text-align: left; font-size: 10.5px; font-weight: 600;
+  letter-spacing: 0.01em; color: var(--ink-faint); padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
 }
 .term-table td {
-  font-size: 13px; color: var(--t2); padding: 8px 16px;
-  border-bottom: 1px solid var(--border); font-family: var(--mono); font-variant-numeric: tabular-nums;
+  font-size: 13px; color: var(--ink-soft); padding: 8px 16px;
+  border-bottom: 1px solid var(--line); font-family: var(--mono); font-variant-numeric: tabular-nums;
 }
-.term-table td:first-child { font-family: var(--font); color: var(--t1); }
+.term-table td:first-child { font-family: var(--font); color: var(--ink); }
 .term-table tr:last-child td { border-bottom: none; }
 .term-table .term-num { text-align: right; }
-.term-table .term-total td { font-weight: 600; color: var(--t1); background: rgba(255,255,255,0.02); }
+.term-table .term-total td { font-weight: 600; color: var(--ink); background: var(--canvas); }
 .term-scroll { overflow-x: auto; }
 .term-scroll .term-table { min-width: 640px; }
-.term-empty { padding: 20px 18px; font-size: 13px; color: var(--t3); }
+.term-empty { padding: 20px 18px; font-size: 13px; color: var(--ink-faint); }
 
 @media (max-width: 900px) {
   .term-cols { grid-template-columns: 1fr; }
-  .term-cols .term-panel:first-child { border-right: 1px solid var(--border); border-bottom: none; }
+  .term-cols .term-panel:first-child { border-right: 1px solid var(--line); border-bottom: none; }
 }
 </style>
 </head>
@@ -939,6 +969,27 @@ const VALID_ADDRESSES = [
   "3301 Farragut Road","1601 Bedford Avenue","615 Rugby Road"
 ];
 
+// ---- Theme (dark/light), applied site-wide, persisted locally ----
+function applyTheme(mode) {
+  document.documentElement.setAttribute("data-theme", mode);
+}
+function toggleTheme() {
+  const current = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+  const next = current === "dark" ? "light" : "dark";
+  applyTheme(next);
+  try { localStorage.setItem("sd_theme", next); } catch (e) {}
+  // Chart.js bakes colors into the canvas, so rebuild it if Reports is showing.
+  if (typeof STATE !== "undefined" && STATE.viewMode === "reports" && typeof renderGroups === "function") {
+    renderGroups();
+  }
+}
+(function initTheme() {
+  let saved = null;
+  try { saved = localStorage.getItem("sd_theme"); } catch (e) {}
+  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  applyTheme(saved || (prefersDark ? "dark" : "light"));
+})();
+
 let STATE = {
   backendUrl: localStorage_get("sd_url"),
   secret: localStorage_get("sd_secret"),
@@ -1073,6 +1124,10 @@ function renderDashboard() {
         <button class="vt ${STATE.viewMode==='reports'?'active':''}" onclick="setView('reports')">Reports</button>
       </div>
       <div class="meta">${total === STATE.rows.length ? `${total} total` : `${total} of ${STATE.rows.length}`}</div>
+      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+        <svg class="icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.07" y2="4.93"/></svg>
+        <svg class="icon-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
       <button class="refresh" onclick="loadSheet()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         Refresh
@@ -1378,6 +1433,27 @@ function renderReports(el) {
   const monthsSorted = Object.keys(byMonth).sort();
   const typesSorted = Array.from(typeSet).sort();
 
+  // ---- Weekly time-series (for the trend chart only — tables below stay monthly) ----
+  const weekStart = (t) => {
+    const d = new Date(t);
+    const day = d.getDay();                       // 0=Sun..6=Sat
+    const diff = (day === 0 ? -6 : 1) - day;       // shift back to that week's Monday
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate() + diff);
+  };
+  const weekKey = (t) => { const d = weekStart(t); return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); };
+  const weekLabel = (key) => { const [y,m,d] = key.split("-").map(Number); return new Date(y,m-1,d).toLocaleDateString("en-US",{month:"short",day:"numeric"}); };
+  const byWeek = {};   // week-start -> {email, inperson, total}
+  rows.forEach(r => {
+    const t = parseDate(r[COLS.dateReceived]);
+    if (!t) return;
+    const wk = weekKey(t);
+    if (!byWeek[wk]) byWeek[wk] = { email:0, inperson:0, total:0 };
+    if (isEmailCorr(r)) byWeek[wk].email++;
+    else if (isInPersonCorr(r)) byWeek[wk].inperson++;
+    byWeek[wk].total++;
+  });
+  const weeksSorted = Object.keys(byWeek).sort();
+
   // ---- Address rollups ----
   const addrMaint = {};   // address -> count of Maintenance Issue
   rows.forEach(r => {
@@ -1386,7 +1462,7 @@ function renderReports(el) {
       if (a) addrMaint[a] = (addrMaint[a]||0) + 1;
     }
   });
-  const addrMaintRows = Object.keys(addrMaint).filter(a => addrMaint[a] > 1).sort((a,b)=>addrMaint[b]-addrMaint[a]);
+  const addrMaintRows = Object.keys(addrMaint).filter(a => addrMaint[a] > 10).sort((a,b)=>addrMaint[b]-addrMaint[a]);
 
   const tile = (label, value, accent) => `
     <div class="term-tile ${accent||''}"><div class="term-tile-label">${label}</div><div class="term-tile-num">${value.toLocaleString()}</div></div>`;
@@ -1423,7 +1499,7 @@ function renderReports(el) {
       </div>
 
       <div class="term-section">
-        <h2 class="term-h">Monthly Inquiry Trend</h2>
+        <h2 class="term-h">Weekly Inquiry Trend</h2>
         <div class="term-panel">
           <div class="term-chart-wrap"><canvas id="termMonthlyChart"></canvas></div>
           <div class="term-legend">
@@ -1431,30 +1507,6 @@ function renderReports(el) {
             <span class="term-leg"><span class="term-dot" style="background:#2563a8"></span>Email</span>
             <span class="term-leg"><span class="term-dot" style="background:#b8621b"></span>In-Person</span>
           </div>
-        </div>
-      </div>
-
-      <div class="term-cols-row">
-        <div class="term-panel">
-          <div style="padding:14px 16px 0"><h2 class="term-h" style="margin-bottom:6px">Borough Report</h2></div>
-          <table class="term-table">
-            <thead><tr><th>Borough</th><th class="term-num">Total</th></tr></thead>
-            <tbody>
-              ${tableRows(boroughCounts, boroughRows)}
-              <tr class="term-total"><td>Total</td><td class="term-num">${total.toLocaleString()}</td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="term-panel">
-          <div style="padding:14px 16px 0"><h2 class="term-h" style="margin-bottom:6px">Inquiries by Category</h2></div>
-          <table class="term-table">
-            <thead><tr><th>Category</th><th class="term-num">Total</th></tr></thead>
-            <tbody>
-              ${tableRows(catCounts, catRows)}
-              <tr class="term-total"><td>Total</td><td class="term-num">${total.toLocaleString()}</td></tr>
-            </tbody>
-          </table>
         </div>
       </div>
 
@@ -1501,20 +1553,44 @@ function renderReports(el) {
         </div>
       </div>
 
+      <div class="term-cols-row">
+        <div class="term-panel">
+          <div style="padding:14px 16px 0"><h2 class="term-h" style="margin-bottom:6px">Borough Report</h2></div>
+          <table class="term-table">
+            <thead><tr><th>Borough</th><th class="term-num">Total</th></tr></thead>
+            <tbody>
+              ${tableRows(boroughCounts, boroughRows)}
+              <tr class="term-total"><td>Total</td><td class="term-num">${total.toLocaleString()}</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="term-panel">
+          <div style="padding:14px 16px 0"><h2 class="term-h" style="margin-bottom:6px">Inquiries by Category</h2></div>
+          <table class="term-table">
+            <thead><tr><th>Category</th><th class="term-num">Total</th></tr></thead>
+            <tbody>
+              ${tableRows(catCounts, catRows)}
+              <tr class="term-total"><td>Total</td><td class="term-num">${total.toLocaleString()}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div class="term-section">
-        <h2 class="term-h">Addresses With Multiple Maintenance Issues</h2>
+        <h2 class="term-h">Addresses With Multiple Maintenance Issues <span class="term-sub">(more than 10)</span></h2>
         <div class="term-panel">
           ${addrMaintRows.length ? `<table class="term-table">
             <thead><tr><th>Address</th><th class="term-num">Maintenance Issues</th></tr></thead>
             <tbody>
               ${addrMaintRows.map(a => `<tr><td>${escapeHtml(a)}</td><td class="term-num">${addrMaint[a].toLocaleString()}</td></tr>`).join("")}
             </tbody>
-          </table>` : `<div class="term-empty">No addresses with more than one maintenance issue.</div>`}
+          </table>` : `<div class="term-empty">No addresses with more than 10 maintenance issues.</div>`}
         </div>
       </div>
     </div>`;
 
-  buildMonthlyChart(monthsSorted, byMonth, monthLabel);
+  buildMonthlyChart(weeksSorted, byWeek, weekLabel);
 }
 
 // ---- Chart.js: shared dark-terminal options builder ----
@@ -1522,8 +1598,8 @@ function cssVar(name) {
   return getComputedStyle(document.querySelector(".term") || document.documentElement).getPropertyValue(name).trim();
 }
 function cleanChartOpts(fmtY, tooltipLabel) {
-  const t1 = cssVar('--t1') || '#F2F4F3', t2 = cssVar('--t2') || '#A6ACB2', t3 = cssVar('--t3') || '#808791',
-        border = cssVar('--border') || '#191C1F', surface = cssVar('--surface') || '#0F1113';
+  const t1 = cssVar('--ink') || '#1a1d21', t2 = cssVar('--ink-soft') || '#4a4f57', t3 = cssVar('--ink-faint') || '#878d96',
+        border = cssVar('--line') || '#e4e6e9', surface = cssVar('--paper') || '#ffffff';
   const o = {
     responsive: true,
     maintainAspectRatio: false,
