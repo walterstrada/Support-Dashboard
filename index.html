@@ -235,6 +235,7 @@
   }
   .rpt-stat-label { font-size: 12px; color: var(--ink-faint); font-weight: 500; margin-bottom: 6px; }
   .rpt-stat-num { font-size: 26px; font-weight: 650; letter-spacing: -0.02em; color: var(--ink); }
+  .rpt-stat-of { font-size: 16px; font-weight: 500; color: var(--ink-faint); }
   .rpt-cols { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start; }
   .rpt-half { flex: 1; min-width: 300px; margin-bottom: 0; }
   .rpt-table {
@@ -250,6 +251,8 @@
   .rpt-table tr:last-child td { border-bottom: none; }
   .rpt-num { text-align: right; font-variant-numeric: tabular-nums; }
   .rpt-total td { font-weight: 700; color: var(--ink); background: var(--canvas); }
+  .rpt-scroll { overflow-x: auto; }
+  .rpt-scroll .rpt-table { min-width: 640px; }
   .daily-desc { font-size: 14px; color: var(--ink-soft); line-height: 1.5; max-width: 620px; }
   .daily-section { margin-bottom: 36px; }
   .daily-h {
@@ -1264,15 +1267,19 @@ function renderReports(el) {
   const closed = rows.filter(r => (r[COLS.stradaStatus]||"").toLowerCase() === "closed").length;
   const open = total - closed;
 
-  // Distinct residents (by Tenant Name) and buildings (by Building Address dropdown)
+  // Distinct residents (by Tenant Name)
   const residents = new Set();
-  const buildings = new Set();
+  const buildingsSeen = new Set();   // lowercased addresses present in the data
   rows.forEach(r => {
     const n = (r[COLS.name]||"").trim();
     if (n) residents.add(n.toLowerCase());
     const b = (r[COLS.address]||"").trim();
-    if (b) buildings.add(b.toLowerCase());
+    if (b) buildingsSeen.add(b.toLowerCase());
   });
+  // Buildings coverage: how many of the known canonical buildings appear in the data
+  const knownBuildings = VALID_ADDRESSES.map(a => a.toLowerCase());
+  const buildingsWithInquiries = knownBuildings.filter(a => buildingsSeen.has(a)).length;
+  const buildingsTotal = VALID_ADDRESSES.length;
 
   // Past-week rolling (Date Received within last 7 days)
   const now = new Date();
@@ -1301,6 +1308,38 @@ function renderReports(el) {
   });
   const catRows = Object.keys(catCounts).sort((a,b)=>catCounts[b]-catCounts[a]);
 
+  // ---- Monthly time-series: inquiries by month, split by correspondence ----
+  const monthKey = (t) => { const d = new Date(t); return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0"); };
+  const monthLabel = (key) => { const [y,m] = key.split("-"); return new Date(+y, +m-1, 1).toLocaleDateString("en-US",{month:"short",year:"2-digit"}); };
+  const byMonth = {};        // month -> {email, inperson, total}
+  const byMonthType = {};    // month -> {type -> count}
+  const typeSet = new Set();
+  rows.forEach(r => {
+    const t = parseDate(r[COLS.dateReceived]);
+    if (!t) return;
+    const mk = monthKey(t);
+    if (!byMonth[mk]) byMonth[mk] = { email:0, inperson:0, total:0 };
+    if (isEmailCorr(r)) byMonth[mk].email++;
+    else if (isInPersonCorr(r)) byMonth[mk].inperson++;
+    byMonth[mk].total++;
+    const ty = (r[COLS.inquiryType]||"").trim() || "Uncategorized";
+    typeSet.add(ty);
+    if (!byMonthType[mk]) byMonthType[mk] = {};
+    byMonthType[mk][ty] = (byMonthType[mk][ty]||0) + 1;
+  });
+  const monthsSorted = Object.keys(byMonth).sort();          // chronological
+  const typesSorted = Array.from(typeSet).sort();
+
+  // ---- Address rollups ----
+  const addrMaint = {};   // address -> count of Maintenance Issue
+  rows.forEach(r => {
+    if ((r[COLS.inquiryType]||"") === "Maintenance Issue") {
+      const a = (r[COLS.address]||"").trim() || (r[COLS.addressStr]||"").trim();
+      if (a) addrMaint[a] = (addrMaint[a]||0) + 1;
+    }
+  });
+  const addrMaintRows = Object.keys(addrMaint).filter(a => addrMaint[a] > 1).sort((a,b)=>addrMaint[b]-addrMaint[a]);
+
   const statCard = (label, value) => `
     <div class="rpt-stat"><div class="rpt-stat-label">${label}</div><div class="rpt-stat-num">${value.toLocaleString()}</div></div>`;
 
@@ -1322,7 +1361,7 @@ function renderReports(el) {
           ${statCard("Closed Issues", closed)}
           ${statCard("Total Inquiries", total)}
           ${statCard("Total Residents", residents.size)}
-          ${statCard("Total Buildings", buildings.size)}
+          <div class="rpt-stat"><div class="rpt-stat-label">Buildings with Inquiries</div><div class="rpt-stat-num">${buildingsWithInquiries}<span class="rpt-stat-of">/${buildingsTotal}</span></div></div>
         </div>
       </div>
 
@@ -1357,6 +1396,59 @@ function renderReports(el) {
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div class="rpt-section">
+        <h2 class="rpt-h">Monthly Inquiries by Correspondence</h2>
+        <div class="rpt-scroll">
+          <table class="rpt-table">
+            <thead><tr><th>Month</th><th class="rpt-num">Email</th><th class="rpt-num">In-Person</th><th class="rpt-num">Total</th></tr></thead>
+            <tbody>
+              ${monthsSorted.map(mk => `<tr>
+                <td>${monthLabel(mk)}</td>
+                <td class="rpt-num">${byMonth[mk].email.toLocaleString()}</td>
+                <td class="rpt-num">${byMonth[mk].inperson.toLocaleString()}</td>
+                <td class="rpt-num">${byMonth[mk].total.toLocaleString()}</td>
+              </tr>`).join("")}
+              <tr class="rpt-total">
+                <td>Grand Total</td>
+                <td class="rpt-num">${monthsSorted.reduce((s,mk)=>s+byMonth[mk].email,0).toLocaleString()}</td>
+                <td class="rpt-num">${monthsSorted.reduce((s,mk)=>s+byMonth[mk].inperson,0).toLocaleString()}</td>
+                <td class="rpt-num">${monthsSorted.reduce((s,mk)=>s+byMonth[mk].total,0).toLocaleString()}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="rpt-section">
+        <h2 class="rpt-h">Monthly Inquiries by Type</h2>
+        <div class="rpt-scroll">
+          <table class="rpt-table">
+            <thead><tr><th>Month</th>${typesSorted.map(t=>`<th class="rpt-num">${escapeHtml(t)}</th>`).join("")}<th class="rpt-num">Total</th></tr></thead>
+            <tbody>
+              ${monthsSorted.map(mk => {
+                const mt = byMonthType[mk] || {};
+                const rowTotal = typesSorted.reduce((s,t)=>s+(mt[t]||0),0);
+                return `<tr><td>${monthLabel(mk)}</td>${typesSorted.map(t=>`<td class="rpt-num">${(mt[t]||0).toLocaleString()}</td>`).join("")}<td class="rpt-num">${rowTotal.toLocaleString()}</td></tr>`;
+              }).join("")}
+              <tr class="rpt-total"><td>Grand Total</td>${typesSorted.map(t=>{
+                const colTotal = monthsSorted.reduce((s,mk)=>s+((byMonthType[mk]||{})[t]||0),0);
+                return `<td class="rpt-num">${colTotal.toLocaleString()}</td>`;
+              }).join("")}<td class="rpt-num">${total.toLocaleString()}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="rpt-section">
+        <h2 class="rpt-h">Addresses with Multiple Maintenance Issues</h2>
+        ${addrMaintRows.length ? `<table class="rpt-table">
+          <thead><tr><th>Address</th><th class="rpt-num">Maintenance Issues</th></tr></thead>
+          <tbody>
+            ${addrMaintRows.map(a => `<tr><td>${escapeHtml(a)}</td><td class="rpt-num">${addrMaint[a].toLocaleString()}</td></tr>`).join("")}
+          </tbody>
+        </table>` : `<div class="daily-empty">No addresses with more than one maintenance issue.</div>`}
       </div>
     </div>`;
 }
