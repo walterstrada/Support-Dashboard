@@ -253,6 +253,13 @@
   .rpt-total td { font-weight: 700; color: var(--ink); background: var(--canvas); }
   .rpt-scroll { overflow-x: auto; }
   .rpt-scroll .rpt-table { min-width: 640px; }
+  .rpt-chart {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 14px 16px 6px; margin-bottom: 12px;
+  }
+  .rpt-legend { display: flex; gap: 18px; flex-wrap: wrap; }
+  .rpt-leg { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-soft); }
+  .rpt-swatch { width: 12px; height: 3px; border-radius: 2px; display: inline-block; }
   .daily-desc { font-size: 14px; color: var(--ink-soft); line-height: 1.5; max-width: 620px; }
   .daily-section { margin-bottom: 36px; }
   .daily-h {
@@ -1399,6 +1406,16 @@ function renderReports(el) {
       </div>
 
       <div class="rpt-section">
+        <h2 class="rpt-h">Monthly Inquiry Trend</h2>
+        ${buildMonthlyChart(monthsSorted, byMonth, monthLabel)}
+        <div class="rpt-legend">
+          <span class="rpt-leg"><span class="rpt-swatch" style="background:#2b8a5f"></span>Total</span>
+          <span class="rpt-leg"><span class="rpt-swatch" style="background:#2563a8"></span>Email</span>
+          <span class="rpt-leg"><span class="rpt-swatch" style="background:#b8621b"></span>In-Person</span>
+        </div>
+      </div>
+
+      <div class="rpt-section">
         <h2 class="rpt-h">Monthly Inquiries by Correspondence</h2>
         <div class="rpt-scroll">
           <table class="rpt-table">
@@ -1451,6 +1468,50 @@ function renderReports(el) {
         </table>` : `<div class="daily-empty">No addresses with more than one maintenance issue.</div>`}
       </div>
     </div>`;
+}
+
+// Build an inline SVG line chart of Total / Email / In-Person by month.
+function buildMonthlyChart(months, byMonth, monthLabel) {
+  if (!months.length) return `<div class="daily-empty">No dated inquiries to chart.</div>`;
+
+  const W = 820, H = 300, padL = 44, padR = 16, padT = 16, padB = 34;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+
+  const totals = months.map(m => byMonth[m].total);
+  const maxV = Math.max(1, ...totals);
+  // round the axis max up to a "nice" number
+  const niceMax = (v) => { const p = Math.pow(10, Math.floor(Math.log10(v))); const n = v / p; const step = n<=1?1:n<=2?2:n<=5?5:10; return step*p; };
+  const yMax = niceMax(maxV);
+
+  const x = (i) => padL + (months.length === 1 ? plotW/2 : (i/(months.length-1))*plotW);
+  const y = (v) => padT + plotH - (v/yMax)*plotH;
+
+  const line = (vals, color) => {
+    const d = vals.map((v,i)=>`${i===0?'M':'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+    const dots = vals.map((v,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="3" fill="${color}"/>`).join("");
+    return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2"/>${dots}`;
+  };
+
+  // Y gridlines (0, 1/4, 1/2, 3/4, max)
+  const gridY = [0,0.25,0.5,0.75,1].map(f => {
+    const val = Math.round(yMax*f);
+    const yy = y(val);
+    return `<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}" stroke="var(--line-soft)" stroke-width="1"/>`
+      + `<text x="${padL-8}" y="${(yy+4).toFixed(1)}" text-anchor="end" font-size="11" fill="var(--ink-faint)">${val}</text>`;
+  }).join("");
+
+  // X labels (skip some if many months)
+  const skip = months.length > 12 ? Math.ceil(months.length/12) : 1;
+  const xLabels = months.map((m,i) => (i % skip === 0)
+    ? `<text x="${x(i).toFixed(1)}" y="${H-12}" text-anchor="middle" font-size="11" fill="var(--ink-faint)">${monthLabel(m)}</text>` : "").join("");
+
+  const totalLine = line(months.map(m=>byMonth[m].total), "#2b8a5f");
+  const emailLine = line(months.map(m=>byMonth[m].email), "#2563a8");
+  const inpersonLine = line(months.map(m=>byMonth[m].inperson), "#b8621b");
+
+  return `<div class="rpt-chart"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" width="100%">
+    ${gridY}${xLabels}${totalLine}${emailLine}${inpersonLine}
+  </svg></div>`;
 }
 
 function renderDaily(el) {
