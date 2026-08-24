@@ -219,6 +219,37 @@
   /* ---- Daily landing page ---- */
   .daily-header { margin-bottom: 30px; }
   .daily-title { font-size: 26px; font-weight: 650; letter-spacing: -0.02em; color: var(--ink); margin-bottom: 6px; }
+
+  /* ---- Reports / Support Dashboard ---- */
+  .reports-header { margin-bottom: 28px; }
+  .reports-title { font-size: 26px; font-weight: 650; letter-spacing: -0.02em; color: var(--ink); margin-bottom: 6px; }
+  .reports-desc { font-size: 14px; color: var(--ink-soft); line-height: 1.5; max-width: 640px; }
+  .rpt-section { margin-bottom: 30px; }
+  .rpt-h { font-size: 15px; font-weight: 650; color: var(--ink); margin-bottom: 14px; letter-spacing: -0.01em; }
+  .rpt-sub { font-size: 12px; font-weight: 500; color: var(--ink-faint); }
+  .rpt-stats { display: flex; flex-wrap: wrap; gap: 13px; }
+  .rpt-stat {
+    flex: 1; min-width: 130px;
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 16px 18px;
+  }
+  .rpt-stat-label { font-size: 12px; color: var(--ink-faint); font-weight: 500; margin-bottom: 6px; }
+  .rpt-stat-num { font-size: 26px; font-weight: 650; letter-spacing: -0.02em; color: var(--ink); }
+  .rpt-cols { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start; }
+  .rpt-half { flex: 1; min-width: 300px; margin-bottom: 0; }
+  .rpt-table {
+    width: 100%; border-collapse: collapse;
+    background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden;
+  }
+  .rpt-table th {
+    text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.03em; color: var(--ink-faint); padding: 10px 14px;
+    background: var(--canvas); border-bottom: 1px solid var(--line);
+  }
+  .rpt-table td { font-size: 13.5px; color: var(--ink-soft); padding: 9px 14px; border-bottom: 1px solid var(--line-soft); }
+  .rpt-table tr:last-child td { border-bottom: none; }
+  .rpt-num { text-align: right; font-variant-numeric: tabular-nums; }
+  .rpt-total td { font-weight: 700; color: var(--ink); background: var(--canvas); }
   .daily-desc { font-size: 14px; color: var(--ink-soft); line-height: 1.5; max-width: 620px; }
   .daily-section { margin-bottom: 36px; }
   .daily-h {
@@ -989,6 +1020,7 @@ function renderDashboard() {
         <button class="vt ${STATE.viewMode==='daily'?'active':''}" onclick="setView('daily')">Daily</button>
         <button class="vt ${STATE.viewMode==='chronological'?'active':''}" onclick="setView('chronological')">Chronological</button>
         <button class="vt ${STATE.viewMode==='category'?'active':''}" onclick="setView('category')">Category</button>
+        <button class="vt ${STATE.viewMode==='reports'?'active':''}" onclick="setView('reports')">Reports</button>
       </div>
       <div class="meta">${total === STATE.rows.length ? `${total} total` : `${total} of ${STATE.rows.length}`}</div>
       <button class="refresh" onclick="loadSheet()">
@@ -997,7 +1029,7 @@ function renderDashboard() {
       </button>
     </div>
     <div class="wrap">
-      ${STATE.viewMode === 'daily' ? '' : `<aside class="sidebar">
+      ${(STATE.viewMode === 'daily' || STATE.viewMode === 'reports') ? '' : `<aside class="sidebar">
         <div class="side-sec">
           <div class="side-label">Strada Status</div>
           <div class="side-btns">
@@ -1072,7 +1104,7 @@ function renderDashboard() {
       </aside>`}
 
       <div class="main">
-        ${STATE.viewMode === 'daily' ? '' : `<div class="stats stats-6">
+        ${(STATE.viewMode === 'daily' || STATE.viewMode === 'reports') ? '' : `<div class="stats stats-6">
           <div class="stat"><div class="label">${anyFilterActive() || STATE.search ? "Showing" : "Total"}</div><div class="num">${total}</div></div>
           <div class="stat accent-snew"><div class="label">New</div><div class="num">${sNew}</div></div>
           <div class="stat accent-sresponded"><div class="label">Responded</div><div class="num">${sResponded}</div></div>
@@ -1223,6 +1255,112 @@ function isInPersonCorr(r) {
   return c.includes("person");
 }
 
+// ---- Reports / Support Dashboard (statistics computed live, client-side) ----
+function renderReports(el) {
+  const rows = STATE.rows;
+  const total = rows.length;
+
+  // Open / Closed by Strada Status
+  const closed = rows.filter(r => (r[COLS.stradaStatus]||"").toLowerCase() === "closed").length;
+  const open = total - closed;
+
+  // Distinct residents (by Tenant Name) and buildings (by Building Address dropdown)
+  const residents = new Set();
+  const buildings = new Set();
+  rows.forEach(r => {
+    const n = (r[COLS.name]||"").trim();
+    if (n) residents.add(n.toLowerCase());
+    const b = (r[COLS.address]||"").trim();
+    if (b) buildings.add(b.toLowerCase());
+  });
+
+  // Past-week rolling (Date Received within last 7 days)
+  const now = new Date();
+  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+  const inLastWeek = rows.filter(r => {
+    const t = parseDate(r[COLS.dateReceived]);
+    return t && t >= weekAgo.getTime() && t <= now.getTime() + 86400000;
+  });
+  const weekEmail = inLastWeek.filter(isEmailCorr).length;
+  const weekInPerson = inLastWeek.filter(isInPersonCorr).length;
+  const weekTotal = inLastWeek.length;
+
+  // Borough breakdown (with No Borough bucket)
+  const boroughCounts = {};
+  rows.forEach(r => {
+    const b = (r[COLS.borough]||"").trim() || "No Borough";
+    boroughCounts[b] = (boroughCounts[b]||0) + 1;
+  });
+  const boroughRows = Object.keys(boroughCounts).sort((a,b)=>boroughCounts[b]-boroughCounts[a]);
+
+  // Category breakdown (Inquiry Type)
+  const catCounts = {};
+  rows.forEach(r => {
+    const c = (r[COLS.inquiryType]||"").trim() || "Uncategorized";
+    catCounts[c] = (catCounts[c]||0) + 1;
+  });
+  const catRows = Object.keys(catCounts).sort((a,b)=>catCounts[b]-catCounts[a]);
+
+  const statCard = (label, value) => `
+    <div class="rpt-stat"><div class="rpt-stat-label">${label}</div><div class="rpt-stat-num">${value.toLocaleString()}</div></div>`;
+
+  const tableRows = (obj, keys) => keys.map(k =>
+    `<tr><td>${escapeHtml(k)}</td><td class="rpt-num">${obj[k].toLocaleString()}</td></tr>`
+  ).join("");
+
+  el.innerHTML = `
+    <div class="reports">
+      <div class="reports-header">
+        <h1 class="reports-title">Support Dashboard</h1>
+        <p class="reports-desc">Live statistics from the Master Inquiries list as of ${now.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}. These recompute every time the page loads.</p>
+      </div>
+
+      <div class="rpt-section">
+        <h2 class="rpt-h">Summary</h2>
+        <div class="rpt-stats">
+          ${statCard("Open Issues", open)}
+          ${statCard("Closed Issues", closed)}
+          ${statCard("Total Inquiries", total)}
+          ${statCard("Total Residents", residents.size)}
+          ${statCard("Total Buildings", buildings.size)}
+        </div>
+      </div>
+
+      <div class="rpt-section">
+        <h2 class="rpt-h">Past-Week Rolling Report <span class="rpt-sub">(last 7 days)</span></h2>
+        <div class="rpt-stats">
+          ${statCard("Email Inquiries", weekEmail)}
+          ${statCard("In-Person Inquiries", weekInPerson)}
+          ${statCard("Total Inquiries", weekTotal)}
+        </div>
+      </div>
+
+      <div class="rpt-cols">
+        <div class="rpt-section rpt-half">
+          <h2 class="rpt-h">Borough Report</h2>
+          <table class="rpt-table">
+            <thead><tr><th>Borough</th><th class="rpt-num">Total</th></tr></thead>
+            <tbody>
+              ${tableRows(boroughCounts, boroughRows)}
+              <tr class="rpt-total"><td>Total</td><td class="rpt-num">${total.toLocaleString()}</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="rpt-section rpt-half">
+          <h2 class="rpt-h">Inquiries by Category</h2>
+          <table class="rpt-table">
+            <thead><tr><th>Category</th><th class="rpt-num">Total</th></tr></thead>
+            <tbody>
+              ${tableRows(catCounts, catRows)}
+              <tr class="rpt-total"><td>Total</td><td class="rpt-num">${total.toLocaleString()}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+}
+
 function renderDaily(el) {
   const today = new Date();
   const yest = new Date(); yest.setDate(yest.getDate() - 1);
@@ -1275,6 +1413,11 @@ function renderGroups() {
 
   if (STATE.viewMode === "daily") {
     renderDaily(el);
+    return;
+  }
+
+  if (STATE.viewMode === "reports") {
+    renderReports(el);
     return;
   }
 
