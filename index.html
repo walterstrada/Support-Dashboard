@@ -257,9 +257,18 @@
     background: var(--paper); border: 1px solid var(--line);
     border-radius: var(--radius); padding: 14px 16px 6px; margin-bottom: 12px;
   }
+  .rpt-hot { cursor: pointer; }
+  .chart-tip {
+    position: absolute; pointer-events: none; z-index: 5;
+    background: var(--ink); color: #fff; font-size: 12px; font-weight: 500;
+    padding: 6px 9px; border-radius: 6px; white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  }
   .rpt-legend { display: flex; gap: 18px; flex-wrap: wrap; }
   .rpt-leg { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-soft); }
   .rpt-swatch { width: 12px; height: 3px; border-radius: 2px; display: inline-block; }
+  .rpt-swatch-area { width: 12px; height: 12px; border-radius: 3px; opacity: 0.5; }
+  .rpt-swatch-line { width: 14px; height: 3px; }
   .daily-desc { font-size: 14px; color: var(--ink-soft); line-height: 1.5; max-width: 620px; }
   .daily-section { margin-bottom: 36px; }
   .daily-h {
@@ -1409,9 +1418,9 @@ function renderReports(el) {
         <h2 class="rpt-h">Monthly Inquiry Trend</h2>
         ${buildMonthlyChart(monthsSorted, byMonth, monthLabel)}
         <div class="rpt-legend">
-          <span class="rpt-leg"><span class="rpt-swatch" style="background:#2b8a5f"></span>Total</span>
-          <span class="rpt-leg"><span class="rpt-swatch" style="background:#2563a8"></span>Email</span>
-          <span class="rpt-leg"><span class="rpt-swatch" style="background:#b8621b"></span>In-Person</span>
+          <span class="rpt-leg"><span class="rpt-swatch rpt-swatch-line" style="background:#2b8a5f"></span>Total</span>
+          <span class="rpt-leg"><span class="rpt-swatch rpt-swatch-area" style="background:#2563a8"></span>Email</span>
+          <span class="rpt-leg"><span class="rpt-swatch rpt-swatch-area" style="background:#b8621b"></span>In-Person</span>
         </div>
       </div>
 
@@ -1479,20 +1488,39 @@ function buildMonthlyChart(months, byMonth, monthLabel) {
 
   const totals = months.map(m => byMonth[m].total);
   const maxV = Math.max(1, ...totals);
-  // round the axis max up to a "nice" number
   const niceMax = (v) => { const p = Math.pow(10, Math.floor(Math.log10(v))); const n = v / p; const step = n<=1?1:n<=2?2:n<=5?5:10; return step*p; };
   const yMax = niceMax(maxV);
 
   const x = (i) => padL + (months.length === 1 ? plotW/2 : (i/(months.length-1))*plotW);
   const y = (v) => padT + plotH - (v/yMax)*plotH;
 
-  const line = (vals, color) => {
-    const d = vals.map((v,i)=>`${i===0?'M':'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
-    const dots = vals.map((v,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="3" fill="${color}"/>`).join("");
-    return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2"/>${dots}`;
-  };
+  // Colors
+  const C_INPERSON = "#b8621b", C_EMAIL = "#2563a8";
 
-  // Y gridlines (0, 1/4, 1/2, 3/4, max)
+  // Stacked bands: in-person on the bottom (0..inperson), email stacked on top
+  // (inperson..inperson+email == total). Build filled area paths.
+  const baseline = months.map((m,i) => `${x(i).toFixed(1)},${y(0).toFixed(1)}`);
+  const inpersonTop = months.map((m,i) => ({ xv: x(i), yv: y(byMonth[m].inperson) }));
+  const totalTop = months.map((m,i) => ({ xv: x(i), yv: y(byMonth[m].total) }));
+
+  // In-person band: from baseline up to inperson value
+  const inpersonArea =
+    `M${x(0).toFixed(1)},${y(0).toFixed(1)} `
+    + inpersonTop.map(p=>`L${p.xv.toFixed(1)},${p.yv.toFixed(1)}`).join(" ")
+    + ` L${x(months.length-1).toFixed(1)},${y(0).toFixed(1)} Z`;
+
+  // Email band: from inperson line up to total line (drawn as a ribbon)
+  const emailArea =
+    `M${inpersonTop[0].xv.toFixed(1)},${inpersonTop[0].yv.toFixed(1)} `
+    + inpersonTop.slice(1).map(p=>`L${p.xv.toFixed(1)},${p.yv.toFixed(1)}`).join(" ")
+    + " "
+    + totalTop.slice().reverse().map(p=>`L${p.xv.toFixed(1)},${p.yv.toFixed(1)}`).join(" ")
+    + " Z";
+
+  // Total outline line
+  const totalLine = `M` + totalTop.map(p=>`${p.xv.toFixed(1)},${p.yv.toFixed(1)}`).join(" L");
+
+  // Y gridlines
   const gridY = [0,0.25,0.5,0.75,1].map(f => {
     const val = Math.round(yMax*f);
     const yy = y(val);
@@ -1500,18 +1528,60 @@ function buildMonthlyChart(months, byMonth, monthLabel) {
       + `<text x="${padL-8}" y="${(yy+4).toFixed(1)}" text-anchor="end" font-size="11" fill="var(--ink-faint)">${val}</text>`;
   }).join("");
 
-  // X labels (skip some if many months)
+  // X labels
   const skip = months.length > 12 ? Math.ceil(months.length/12) : 1;
   const xLabels = months.map((m,i) => (i % skip === 0)
     ? `<text x="${x(i).toFixed(1)}" y="${H-12}" text-anchor="middle" font-size="11" fill="var(--ink-faint)">${monthLabel(m)}</text>` : "").join("");
 
-  const totalLine = line(months.map(m=>byMonth[m].total), "#2b8a5f");
-  const emailLine = line(months.map(m=>byMonth[m].email), "#2563a8");
-  const inpersonLine = line(months.map(m=>byMonth[m].inperson), "#b8621b");
+  // Hover markers at the total vertex for each month, with a transparent
+  // hit-area column so hovering anywhere in the month reveals the tooltip.
+  const colW = months.length > 1 ? (plotW/(months.length-1)) : plotW;
+  const hotspots = months.map((m,i) => {
+    const b = byMonth[m];
+    const label = monthLabel(m);
+    const tip = `${label} — Total ${b.total}, Email ${b.email}, In-Person ${b.inperson}`;
+    const cx = x(i), cyT = y(b.total);
+    const hitX = (cx - colW/2).toFixed(1);
+    return `<g class="rpt-hot" onmouseover="showChartTip(evt, ${JSON.stringify(tip).replace(/"/g,'&quot;')})" onmouseout="hideChartTip()" onmousemove="moveChartTip(evt)">`
+      + `<rect x="${hitX}" y="${padT}" width="${colW.toFixed(1)}" height="${plotH}" fill="transparent"/>`
+      + `<circle cx="${cx.toFixed(1)}" cy="${cyT.toFixed(1)}" r="3.5" fill="#2b8a5f"/>`
+      + `<circle cx="${cx.toFixed(1)}" cy="${y(b.inperson).toFixed(1)}" r="3" fill="${C_INPERSON}"/>`
+      + `</g>`;
+  }).join("");
 
-  return `<div class="rpt-chart"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" width="100%">
-    ${gridY}${xLabels}${totalLine}${emailLine}${inpersonLine}
-  </svg></div>`;
+  return `<div class="rpt-chart" style="position:relative">
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" width="100%">
+      ${gridY}${xLabels}
+      <path d="${inpersonArea}" fill="${C_INPERSON}" fill-opacity="0.35" stroke="none"/>
+      <path d="${emailArea}" fill="${C_EMAIL}" fill-opacity="0.30" stroke="none"/>
+      <path d="${totalLine}" fill="none" stroke="#2b8a5f" stroke-width="2"/>
+      ${hotspots}
+    </svg>
+    <div id="chartTip" class="chart-tip" style="display:none"></div>
+  </div>`;
+}
+
+// Tooltip handlers for the monthly chart
+function showChartTip(evt, text) {
+  const tip = document.getElementById("chartTip");
+  if (!tip) return;
+  tip.textContent = text;
+  tip.style.display = "block";
+  moveChartTip(evt);
+}
+function moveChartTip(evt) {
+  const tip = document.getElementById("chartTip");
+  if (!tip || tip.style.display === "none") return;
+  const wrap = tip.parentElement.getBoundingClientRect();
+  let left = evt.clientX - wrap.left + 12;
+  let top = evt.clientY - wrap.top + 12;
+  if (left + tip.offsetWidth > wrap.width) left = wrap.width - tip.offsetWidth - 4;
+  tip.style.left = left + "px";
+  tip.style.top = top + "px";
+}
+function hideChartTip() {
+  const tip = document.getElementById("chartTip");
+  if (tip) tip.style.display = "none";
 }
 
 function renderDaily(el) {
