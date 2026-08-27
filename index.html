@@ -999,6 +999,9 @@ let STATE = {
   search: "",
   statusFilter: "all",
   viewMode: "chronological",      // "category" or "chronological"
+  successionStatuses: null,   // array of Status strings from the Properties sheet, fetched lazily
+  successionLoading: false,
+  successionError: null,
   filters: {
     status: [],              // multi-select: Open / Progress / Closed
     stradaStatus: [],         // multi-select buttons
@@ -1361,6 +1364,55 @@ function isInPersonCorr(r) {
 }
 
 // ---- Reports / Support Dashboard (statistics computed live, client-side) ----
+// Exact status set from the Properties sheet's "Status" column, in display order.
+const SUCCESSION_STATUS_ORDER = [
+  "New",
+  "Hasn't Submitted Application",
+  "In Progress",
+  "Pending Additional Documents",
+  "Complete Application - Pending Review",
+  "Approved",
+  "Not Succession",
+];
+
+function renderSuccessionBody() {
+  if (STATE.successionLoading) {
+    return `<div class="term-empty">Loading succession data…</div>`;
+  }
+  if (STATE.successionError) {
+    return `<div class="term-empty">Couldn't load succession data: ${escapeHtml(STATE.successionError)}
+      <button class="act" style="margin-left:10px" onclick="loadSuccessionData()">Retry</button></div>`;
+  }
+  const statuses = STATE.successionStatuses || [];
+  if (!statuses.length) {
+    return `<div class="term-empty">No succession records found.</div>`;
+  }
+
+  const counts = {};
+  SUCCESSION_STATUS_ORDER.forEach(s => counts[s] = 0);
+  let other = 0;
+  statuses.forEach(s => {
+    const v = (s || "").trim();
+    if (!v) return;
+    if (counts.hasOwnProperty(v)) counts[v]++;
+    else other++;
+  });
+  const total = statuses.filter(s => (s||"").trim()).length;
+
+  const rows = SUCCESSION_STATUS_ORDER.map(s =>
+    `<tr><td>${escapeHtml(s)}</td><td class="term-num">${counts[s].toLocaleString()}</td></tr>`
+  ).join("") + (other > 0
+    ? `<tr><td>Other / Unrecognized</td><td class="term-num">${other.toLocaleString()}</td></tr>` : "");
+
+  return `<table class="term-table">
+    <thead><tr><th>Status</th><th class="term-num">Count</th></tr></thead>
+    <tbody>
+      ${rows}
+      <tr class="term-total"><td>Total</td><td class="term-num">${total.toLocaleString()}</td></tr>
+    </tbody>
+  </table>`;
+}
+
 function renderReports(el) {
   const rows = STATE.rows;
   const total = rows.length;
@@ -1495,6 +1547,13 @@ function renderReports(el) {
           ${tile("Email Inquiries", weekEmail)}
           ${tile("In-Person Inquiries", weekInPerson)}
           ${tile("Total Inquiries", weekTotal, "accent-green")}
+        </div>
+      </div>
+
+      <div class="term-section">
+        <h2 class="term-h">Succession <span class="term-sub">(Properties sheet)</span></h2>
+        <div class="term-panel">
+          ${renderSuccessionBody()}
         </div>
       </div>
 
@@ -2289,7 +2348,34 @@ function updateStatCounts() {
 }
 
 // ---- View toggle ----
-function setView(mode) { STATE.viewMode = mode; renderDashboard(); }
+function setView(mode) {
+  STATE.viewMode = mode;
+  if (mode === "reports" && STATE.successionStatuses === null && !STATE.successionLoading) {
+    STATE.successionLoading = true;
+    renderDashboard();
+    loadSuccessionData();
+    return;
+  }
+  renderDashboard();
+}
+
+async function loadSuccessionData() {
+  STATE.successionLoading = true;
+  STATE.successionError = null;
+  try {
+    const url = STATE.backendUrl + "?action=successionRows&secret=" + encodeURIComponent(STATE.secret);
+    const res = await fetch(url);
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || "Failed to load succession data");
+    STATE.successionStatuses = json.data.statuses || [];
+  } catch (e) {
+    STATE.successionError = e.message || "Couldn't load succession data";
+    STATE.successionStatuses = [];
+  } finally {
+    STATE.successionLoading = false;
+    if (STATE.viewMode === "reports") renderGroups();
+  }
+}
 
 // ---- Sidebar filters ----
 function toggleFilter(key, value) {
